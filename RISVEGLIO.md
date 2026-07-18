@@ -9,6 +9,8 @@ Lavoro su turni (vigile del fuoco, sezione B3). Ho già due app fatte con lo ste
 App personale di routine in stile anime **Solo Leveling**: completo "quest" giornaliere (sport, cultura, corsi, meditazione), guadagno XP, salgo di livello. Se salto le quest, perdo XP e posso scendere di livello. Ogni 20 livelli (al PRIMO raggiungimento) si sblocca una foto milestone per confrontarmi esteticamente nel tempo.
 
 - **File principale**: `index.html` (unico file self-contained: HTML + CSS + JS)
+- **File di configurazione**: `config.js` — contiene SOLO le chiavi Supabase. Si crea una volta e non si tocca mai più. Quando arriva un `index.html` nuovo, si sostituisce e basta: nessuna chiave da reinserire.
+- **Versione**: costante `APP_VERSION` nel codice, mostrata in fondo alla schermata Profilo (serve per verificare che il telefono abbia l'ultima build). Attuale: 1.3
 - **GitHub**: `github.com/giannandreafabrizio-dotcom/Risveglio` (attenzione: R maiuscola)
 - **URL live**: `https://giannandreafabrizio-dotcom.github.io/Risveglio/`
 - **Cartella locale**: `C:\Users\giann\Desktop\Routine`
@@ -74,16 +76,17 @@ Schede: Home ✅ collegata · Schede ✅ collegata · Calendario ✅ collegato �
 
 ## Regole di sviluppo — SEMPRE
 1. **Non rompere mai quello che funziona** — prima di modificare una funzione, leggerla tutta
-2. Un solo file `index.html`, self-contained — mai file CSS/JS separati
+2. Un solo file `index.html` per l'app + `config.js` per le sole chiavi — mai altri file CSS/JS separati
 3. Prima di sostituire index.html, tenere copia del precedente (`index_vecchio.html`)
-4. Le CHIAVI Supabase vanno reinserite ogni volta che Claude consegna un index.html nuovo (Claude non le conosce) — righe marcate `INCOLLA_QUI` in cima allo script
+4. **Le chiavi NON si toccano più**: stanno in `config.js`. Quando Claude consegna un `index.html` nuovo, si sostituisce direttamente. Alzare `APP_VERSION` a ogni consegna.
 5. Testare in locale (doppio clic) PRIMA del push; il warning console "Unsafe attempt to load URL file:" in locale è innocuo
 6. `node --check` sul blocco script prima di consegnare (regola ereditata da NutriGest)
 7. Attenzione all'URL Supabase: SOLO `https://zxuexfhuxxmsleiqkoaz.supabase.co` — senza barra finale, senza `/rest/v1` (errore già successo il 18 lug 2026: 404 su tutto)
 8. Commit: `git add index.html && git commit -m "descrizione" && git push` dalla cartella `C:\Users\giann\Desktop\Routine`
-9. GitHub Pages si aggiorna in ~30 secondi dopo il push
-10. Nuove tabelle: RLS disattivata + `grant all ... to anon` + `notify pgrst, 'reload schema';` (senza reload lo schema nuovo non è visibile all'API)
-11. Aggiornare QUESTO file nello stesso commit quando cambia qualcosa di strutturale (tabelle nuove, funzioni chiave, voci di roadmap chiuse)
+9. GitHub Pages si aggiorna in ~30 secondi dopo il push. Se l'iPhone mostra ancora la versione vecchia: rimuovere l'icona dalla Home e riaggiungerla da Safari. Verificare sempre `APP_VERSION` nel Profilo.
+10. I file `.js` su Windows NON si aprono col doppio clic (Windows prova a eseguirli e dà errore "window non è definito"): tasto destro → Apri con → Blocco note.
+11. Nuove tabelle: RLS disattivata + `grant all ... to anon` + `notify pgrst, 'reload schema';` (senza reload lo schema nuovo non è visibile all'API)
+12. Aggiornare QUESTO file nello stesso commit quando cambia qualcosa di strutturale (tabelle nuove, funzioni chiave, voci di roadmap chiuse)
 
 ## Storia essenziale
 - 18 lug 2026: progettazione, mockup, database, app online su GitHub Pages, installata su iPhone. Home + Schede + Calendario turnario collegati. Incidenti risolti: chiave incollata male (SyntaxError riga 139), URL con `/rest/v1` doppio (404).
