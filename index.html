@@ -168,6 +168,40 @@ const CAT={
 /* ---------- stato + client ---------- */
 let sb=null, profile=null, quests=[], doneToday=new Set(), tab='home';
 let plans=[], exercises=[], lastWeights={}, planIdx=0, wLoaded=false;
+let overrides={}, events={}, calMonth=null, cLoaded=false, ferieCount=0;
+
+/* ============================================================
+   TURNARIO — calcolo automatico (ciclo di 4 giorni, sezioni B1..B8)
+   Ancoraggio verificato: 1 nov 2026 = B2, primo giorno (diurno).
+   Fasi: 0 diurno 8-20 | 1 notte 20-8 | 2 smontante | 3 riposo
+   Quando la sezione è B3 (la tua) → salto turno: fasi 0 e 1 libere.
+   ============================================================ */
+const MY_SECTION = 3;
+const ANCHOR = Date.UTC(2026,10,1);   // 1 novembre 2026
+const ANCHOR_B = 2;                   // quel giorno era B2
+const DAYMS = 86400000;
+
+function shiftFor(dateStr){
+  const [y,m,d] = dateStr.split('-').map(Number);
+  const idx = Math.round((Date.UTC(y,m-1,d) - ANCHOR)/DAYMS);
+  const phase = ((idx % 4) + 4) % 4;
+  const cycle = Math.floor((idx - phase) / 4);
+  const bNum  = ((ANCHOR_B - 1 + cycle) % 8 + 8) % 8 + 1;
+  const salto = (bNum === MY_SECTION);
+  let kind, label, icon;
+  if(salto && phase < 2){ kind='salto'; label='B'+bNum; icon='⌂'; }
+  else if(phase===0){ kind='diurno';     label='B'+bNum; icon='☀'; }
+  else if(phase===1){ kind='notte';      label='B'+bNum; icon='☾'; }
+  else if(phase===2){ kind='smontante';  label='';       icon=''; }
+  else              { kind='riposo';     label='';       icon=''; }
+  return {kind,label,icon,bNum,phase,salto};
+}
+const SHIFT_COLOR = {
+  diurno:'#FFC663', notte:'#5B9BFF', salto:'#4DFFA6',
+  smontante:'transparent', riposo:'transparent',
+  ferie:'#B57BFF', richiamo:'#FF9F43'
+};
+const iso = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 const localDate = tz => new Intl.DateTimeFormat('en-CA',{timeZone:tz||'Europe/Rome'}).format(new Date());
 const $ = s => document.querySelector(s);
 const esc = s => (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -335,16 +369,114 @@ function viewWorkout(){
     <div class="lbl" style="color:var(--sys)">${esc(plan.name)}</div>
     <div class="stack mt8">${rows}</div>`;
 }
+/* ---- CALENDARIO (turni calcolati + eccezioni dal database) ---- */
+async function loadCal(){
+  const [{data},{data:evs}]=await Promise.all([
+    sb.from('shift_overrides').select('*').eq('user_id',OWNER_ID),
+    sb.from('calendar_events').select('*').eq('user_id',OWNER_ID)
+  ]);
+  overrides={}; (data||[]).forEach(o=>overrides[o.day]=o.kind);
+  events={}; (evs||[]).forEach(e=>{ const d=e.starts_at.slice(0,10); (events[d]=events[d]||[]).push(e); });
+  ferieCount=(data||[]).filter(o=>o.kind==='ferie'&&o.day.startsWith(String(new Date().getFullYear()))).length;
+  cLoaded=true; render();
+}
+async function toggleTraining(day){
+  const ex=(events[day]||[])[0];
+  if(ex){
+    await sb.from('calendar_events').delete().eq('id',ex.id);
+    delete events[day]; toast('Allenamento rimosso',getVar('--dim'));
+  }else{
+    const {data}=await sb.from('calendar_events').insert({user_id:OWNER_ID,title:'Allenamento',
+      type:'allenamento',starts_at:day+'T08:00:00+02:00',all_day:true}).select();
+    events[day]=data||[{}]; toast('Allenamento aggiunto',getVar('--sys'));
+  }
+  $('#special').style.display='none'; render();
+}
+async function setOverride(day,kind){
+  if(kind==='auto'){
+    await sb.from('shift_overrides').delete().eq('user_id',OWNER_ID).eq('day',day);
+    delete overrides[day];
+  }else{
+    await sb.from('shift_overrides').upsert({user_id:OWNER_ID,day,kind},{onConflict:'user_id,day'});
+    overrides[day]=kind;
+  }
+  ferieCount=Object.entries(overrides).filter(([d,k])=>k==='ferie'&&d.startsWith(String(new Date().getFullYear()))).length;
+  $('#special').style.display='none';
+  toast(kind==='auto'?'Ripristinato':kind.toUpperCase(),getVar('--glow'));
+  render();
+}
+function dayMenu(day){
+  const s=shiftFor(day), ov=overrides[day];
+  const opts=[['ferie','Ferie','--violet'],['richiamo','Richiamo (turno extra)','--gold'],
+              ['libero','Libero / permesso','--green'],['auto','Ripristina turno normale','--dim']];
+  const box=`<div class="box"><div style="padding:10px 14px;border-bottom:1px solid color-mix(in srgb,var(--violet) 35%,transparent);display:flex;justify-content:space-between;align-items:center">
+    <span class="mono" style="font-size:11px;letter-spacing:2px;color:var(--violet)">${day.split('-').reverse().join('/')}</span>
+    <button data-action="close-special" style="background:none;border:none;color:var(--dim);font-size:16px">✕</button></div>
+    <div style="padding:18px">
+      <div class="mono" style="font-size:11px;color:var(--dim);margin-bottom:14px">
+        Turno da calendario: <span style="color:var(--glow)">${s.kind}${s.label?' · '+s.label:''}</span>${ov?' → ora: <span style="color:var(--gold)">'+ov+'</span>':''}</div>
+      <div class="stack">${opts.map(([k,t,c])=>`<button class="mono" data-action="ovr" data-day="${day}" data-kind="${k}"
+        style="width:100%;text-align:left;padding:11px 13px;font-size:12px;letter-spacing:1px;color:var(${c});
+        border:1px solid color-mix(in srgb,var(${c}) 40%,transparent);background:color-mix(in srgb,var(${c}) 6%,transparent)">${t}</button>`).join('')}
+        <button class="mono" data-action="train" data-day="${day}" style="width:100%;text-align:left;padding:11px 13px;font-size:12px;
+        letter-spacing:1px;color:var(--sys);border:1px solid color-mix(in srgb,var(--sys) 40%,transparent);
+        background:color-mix(in srgb,var(--sys) 6%,transparent);margin-top:6px">${(events[day]||[]).length?'✕ Togli allenamento':'💪 Segna allenamento'}</button></div>
+    </div></div>`;
+  const m=$('#special'); m.innerHTML=box; m.style.display='grid';
+}
+
 function viewCalendar(){
-  const days=[['LUN',14,[['Turno 09–17','--dim'],['Meditazione','--green']]],['MAR',15,[['Allenamento A','--sys'],['Duolingo','--violet']]],
-    ['MER',16,[['Turno 09–17','--dim']]],['GIO',17,[['Allenamento B','--sys'],['Lezione PT','--gold']]],
-    ['VEN',18,[['Turno 14–22','--dim']]],['SAB',19,[['Allenamento C','--sys'],['Corsa 10km','--sys']]],['DOM',20,[['Riposo','--dim']]]];
-  const rows=days.map(([d,n,ev])=>`<div class="panel" style="--pg:var(--sys);padding:10px;display:flex;gap:12px;align-items:center">
-    <div style="width:40px;text-align:center;flex:0 0 auto"><div class="mono" style="font-size:10px;color:var(--dim)">${d}</div>
-    <div style="font-family:var(--disp);font-size:22px;font-weight:700;line-height:1">${n}</div></div>
-    <div style="flex:1;display:flex;flex-wrap:wrap;gap:6px">${ev.map(([t,c])=>`<span class="chip" style="color:var(${c});border:1px solid color-mix(in srgb,var(${c}) 40%,transparent);background:color-mix(in srgb,var(${c}) 8%,transparent)">${t}</span>`).join('')}</div></div>`).join('');
-  return `<div class="lbl dim">Pianificazione</div><div class="hi mb14">Luglio 2026</div><div class="stack">${rows}</div>
-     <div class="mono" style="font-size:10px;color:var(--dim);margin-top:14px;text-align:center">anteprima · da collegare al database</div>`;
+  if(!cLoaded){ loadCal(); return `<div class="lbl dim">Pianificazione</div><div class="hi mb14">Calendario</div>
+    <div class="mono" style="font-size:12px;color:var(--dim)">caricamento…</div>`; }
+  const now=new Date();
+  if(!calMonth) calMonth={y:now.getFullYear(),m:now.getMonth()};
+  const {y,m}=calMonth;
+  const MESI=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+  const first=new Date(y,m,1), start=((first.getDay()+6)%7); // lunedì = 0
+  const ndays=new Date(y,m+1,0).getDate();
+  const todayStr=iso(now);
+
+  let cells='';
+  for(let i=0;i<start;i++) cells+='<div></div>';
+  for(let d=1;d<=ndays;d++){
+    const ds=iso(new Date(y,m,d));
+    const s=shiftFor(ds), ov=overrides[ds];
+    const kind = ov ? (ov==='libero'?'riposo':ov) : s.kind;
+    const col=SHIFT_COLOR[kind]||'transparent';
+    const filled = col!=='transparent';
+    const lab = ov==='ferie'?'FER' : ov==='richiamo'?'EXT' : ov==='libero'?'' : s.label;
+    const ic  = ov==='ferie'?'✈' : ov==='richiamo'?'☀' : ov==='libero'?'' : s.icon;
+    const isToday = ds===todayStr;
+    cells+=`<div data-action="day" data-day="${ds}" style="aspect-ratio:1;padding:4px;cursor:pointer;position:relative;
+      border:1px solid ${isToday?'var(--glow)':'var(--line)'};
+      background:${filled?`color-mix(in srgb,${col} 20%,transparent)`:'rgba(255,255,255,.02)'};
+      box-shadow:${isToday?'0 0 10px -3px var(--glow)':'none'};display:flex;flex-direction:column;justify-content:space-between">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <span style="font-family:var(--disp);font-size:13px;font-weight:600;color:${filled?col:'var(--dim)'}">${d}</span>
+        <span style="font-size:9px;color:${filled?col:'transparent'}">${ic}</span></div>
+      <span class="mono" style="font-size:8px;letter-spacing:.5px;color:${filled?col:'transparent'}">${lab}</span>
+      ${(events[ds]||[]).length?'<i style="position:absolute;bottom:3px;right:3px;width:5px;height:5px;border-radius:50%;background:var(--glow);box-shadow:0 0 6px var(--glow)"></i>':''}</div>`;
+  }
+
+  const leg=[['diurno','8–20'],['notte','20–8'],['salto','salto turno'],['ferie','ferie'],['richiamo','richiamo']]
+    .map(([k,t])=>`<span class="mono" style="font-size:9px;color:${SHIFT_COLOR[k]};display:inline-flex;align-items:center;gap:4px">
+      <i style="width:8px;height:8px;background:${SHIFT_COLOR[k]};display:inline-block"></i>${t}</span>`).join('');
+
+  return `<div class="row mb14">
+      <div><div class="lbl dim">Turnario · Sezione B${MY_SECTION}</div><div class="hi">${MESI[m]} ${y}</div></div>
+      <div style="display:flex;gap:6px">
+        <button class="mono" data-action="mprev" style="padding:6px 10px;color:var(--sys);border:1px solid var(--line);background:transparent">‹</button>
+        <button class="mono" data-action="mnext" style="padding:6px 10px;color:var(--sys);border:1px solid var(--line);background:transparent">›</button>
+      </div></div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px">
+      ${['L','M','M','G','V','S','D'].map(g=>`<div class="mono" style="text-align:center;font-size:9px;color:var(--dim)">${g}</div>`).join('')}</div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px">${cells}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px">${leg}</div>
+    <div class="panel mt8" style="--pg:var(--violet);margin-top:14px;text-align:center">
+      <div class="mono" style="font-size:11px;letter-spacing:1px;color:var(--violet)">FERIE ${new Date().getFullYear()}</div>
+      <div style="font-family:var(--num);font-size:22px;color:var(--glow);margin-top:4px">${ferieCount} / 27</div>
+      <div class="mono" style="font-size:9px;color:var(--dim);margin-top:4px">${27-ferieCount} giorni disponibili</div></div>
+    <div class="mono" style="font-size:9px;color:var(--dim);margin-top:10px;text-align:center">tocca un giorno per ferie o richiamo</div>`;
 }
 function viewLibrary(){
   const books=[['Il Conte di Montecristo','Dumas','in lettura','--violet'],['The Intelligent Investor','Graham','Giu 2026','--gold'],
@@ -410,8 +542,15 @@ document.getElementById('screen').addEventListener('click',e=>{
   else if(a==='skip') skipDay();
   else if(a==='plan'){ planIdx=+el.dataset.i; render(); }
   else if(a==='savew') saveWeight(el.dataset.id, el);
+  else if(a==='day') dayMenu(el.dataset.day);
+  else if(a==='mprev'){ calMonth.m--; if(calMonth.m<0){calMonth.m=11;calMonth.y--;} render(); }
+  else if(a==='mnext'){ calMonth.m++; if(calMonth.m>11){calMonth.m=0;calMonth.y++;} render(); }
 });
 document.getElementById('special').addEventListener('click',e=>{
+  const ov=e.target.closest('[data-action="ovr"]');
+  if(ov){ setOverride(ov.dataset.day, ov.dataset.kind); return; }
+  const tr=e.target.closest('[data-action="train"]');
+  if(tr){ toggleTraining(tr.dataset.day); return; }
   if(e.target.closest('[data-action="close-special"]') || e.target.id==='special'){
     $('#special').style.display='none';
   }
