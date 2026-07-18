@@ -6,6 +6,9 @@
 <meta name="theme-color" content="#05070F" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
 <title>Risveglio</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Orbitron:wght@700;800&family=Share+Tech+Mono&display=swap');
@@ -126,25 +129,29 @@ input{font-family:var(--mono)}
 
 <div id="toast"></div>
 <div id="special"></div>
+<input type="file" id="photoInput" accept="image/*" style="display:none">
+
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
 <script>
 /* ============================================================
    RISVEGLIO — app a file singolo (stile NutriGest)
    ============================================================ */
 
-/* ⬇⬇⬇ INCOLLA QUI LE TUE 2 CHIAVI SUPABASE ⬇⬇⬇
-   Le trovi in Supabase → Settings (⚙) → API
-   - SUPABASE_URL      = "Project URL"
-   - SUPABASE_ANON_KEY = "anon public"  (NON la service_role)          */
-const SUPABASE_URL      = "https://zxuexfhuxxmsleiqkoaz.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp4dWV4Zmh1eHhtc2xlaXFrb2F6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQzMTQxOTUsImV4cCI6MjA5OTg5MDE5NX0.g9bYQzGoi-rol7TvAhUlrYitB7A0DKGbMW9FSMc8TkQ";
-/* ⬆⬆⬆ ------------------------------------------- ⬆⬆⬆ */
+/* Le chiavi Supabase stanno in config.js (file separato, non si tocca mai).
+   Questo file NON va più modificato: sostituiscilo e basta. */
+const CFG = window.RISVEGLIO_CONFIG || {};
+const SUPABASE_URL      = CFG.url || "";
+const SUPABASE_ANON_KEY = CFG.key || "";
 
 const OWNER_ID = "00000000-0000-0000-0000-000000000001"; // il tuo unico profilo
+const APP_VERSION = "1.9";
+const PHOTO_BUCKET = "progress-photos";
 
 /* ---------- logica livelli (pura) ---------- */
 const XP_BASE=140, XP_STEP=6, MILESTONE=20, COMBO_BONUS=30, SKIP_PENALTY=70;
+const WEEKLY_BONUS=40, WEEKLY_TARGET=3;
 const xpNeeded = lvl => XP_BASE + lvl*XP_STEP;
 function rankForLevel(l){ return l>=80?'S':l>=55?'A':l>=35?'B':l>=20?'C':l>=10?'D':'E'; }
 function applyXp(s, delta){
@@ -165,10 +172,56 @@ const CAT={
   corsi:{c:'#FFC663',ic:'↗'}, meditazione:{c:'#4DFFA6',ic:'◈'}
 };
 
+/* ============================================================
+   QUEST SPECIALI — catalogo sfide (una scelta definitiva per soglia)
+   Metriche cumulative misurate dall'app (target = quante IN PIÙ da ora):
+     quests_total  = quest completate (righe quest_logs)
+     perfect_days  = giornate perfette / combo (xp_events reason='combo')
+     trainings     = giorni di allenamento distinti (calendario ∪ pesi)
+     books         = libri finiti
+     active_days   = giornate con almeno una quest
+   ============================================================ */
+const CHALLENGES = {
+  20:{ intro:'Il Sistema apre il Primo Cancello. Un solo sigillo può essere inciso.', options:[
+    {id:'a',diff:'facile',   xp:60,  metric:'perfect_days', target:3,
+      title:'Il Rituale delle Tre Albe', desc:'Colleziona 3 giornate perfette (tutte le quest completate). Ogni alba conquistata incide una runa sull’anima.'},
+    {id:'b',diff:'media',    xp:100, metric:'quests_total', target:25,
+      title:'Il Divoratore di Quest', desc:'Un varco si apre solo per chi non si ferma: completa 25 quest, di qualsiasi tipo. Il conteggio parte adesso.'},
+    {id:'c',diff:'difficile',xp:150, metric:'trainings',    target:8,
+      title:'La Forgia di Ferro', desc:'Il corpo è la prima arma: registra 8 allenamenti. Solo il ferro tempra il Cacciatore.'} ]},
+  40:{ intro:'La Soglia del Monarca ti misura. Scegli con quale prova mostrarti degno.', options:[
+    {id:'a',diff:'facile',   xp:100, metric:'books',        target:2,
+      title:'Il Custode dei Tomi', desc:'La conoscenza è mana: finisci 2 libri. Ogni volume chiuso è un incantesimo appreso.'},
+    {id:'b',diff:'media',    xp:160, metric:'active_days',  target:20,
+      title:'La Danza delle Venti Lune', desc:'Sii presente (almeno una quest) in 20 giornate. La costanza spezza ogni dungeon.'},
+    {id:'c',diff:'difficile',xp:240, metric:'perfect_days', target:10,
+      title:'Il Cuore Impeccabile', desc:'Colleziona 10 giornate perfette. Solo chi non lascia nulla di incompiuto attraversa questa soglia.'} ]},
+  60:{ intro:'L’Ombra si desta e reclama una prova all’altezza del suo nome.', options:[
+    {id:'a',diff:'facile',   xp:150, metric:'quests_total', target:60,
+      title:'Il Pellegrinaggio dei Cento Passi', desc:'Completa 60 quest. Ogni passo è un frammento di potere strappato al vuoto.'},
+    {id:'b',diff:'media',    xp:240, metric:'trainings',    target:20,
+      title:'L’Arsenale del Titano', desc:'Registra 20 allenamenti. Il Titano non nasce: si costruisce, un peso alla volta.'},
+    {id:'c',diff:'difficile',xp:350, metric:'books',        target:3,
+      title:'La Trilogia Proibita', desc:'Finisci 3 libri e leggi ciò che pochi osano. La biblioteca proibita si aprirà.'} ]},
+  80:{ intro:'Il Trono del Sovrano attende. Nessuna soglia oltre questa: dimostra chi sei.', options:[
+    {id:'a',diff:'facile',   xp:220, metric:'perfect_days', target:20,
+      title:'Il Voto delle Venti Aurore', desc:'Colleziona 20 giornate perfette. Il Sovrano non conosce giorni a metà.'},
+    {id:'b',diff:'media',    xp:340, metric:'active_days',  target:50,
+      title:'La Maratona dell’Anima', desc:'Sii attivo in 50 giornate. Una resistenza degna di chi siede sul Trono.'},
+    {id:'c',diff:'difficile',xp:500, metric:'quests_total', target:150,
+      title:'L’Opera Magna', desc:'Completa 150 quest. L’ultima prova: forgia la tua leggenda, quest dopo quest.'} ]}
+};
+const METRIC_LABEL={quests_total:'quest',perfect_days:'giornate perfette',trainings:'allenamenti',books:'libri',active_days:'giornate attive'};
+
 /* ---------- stato + client ---------- */
 let sb=null, profile=null, quests=[], doneToday=new Set(), tab='home';
 let plans=[], exercises=[], lastWeights={}, planIdx=0, wLoaded=false;
 let overrides={}, events={}, calMonth=null, cLoaded=false, ferieCount=0;
+let books=[], libLoaded=false;
+let photos={}, uploadLevel=null;
+let weekTrained=0, weeklyBonusJustGiven=false;
+let allQuests=[], manageLoaded=false, editingQuestId=null;
+let special={}, metricNow={};
 
 /* ============================================================
    TURNARIO — calcolo automatico (ciclo di 4 giorni, sezioni B1..B8)
@@ -205,6 +258,8 @@ const iso = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+
 const localDate = tz => new Intl.DateTimeFormat('en-CA',{timeZone:tz||'Europe/Rome'}).format(new Date());
 const $ = s => document.querySelector(s);
 const esc = s => (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const MESI_ABBR=['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+const fmtBookDate = d => { if(!d) return ''; const p=d.split('-'); return (MESI_ABBR[(+p[1])-1]||'')+' '+p[0]; };
 
 function toast(txt,color){
   const t=$('#toast'); t.style.color=color; t.style.border='1px solid '+color;
@@ -223,7 +278,242 @@ async function load(){
   const today=localDate(profile?.timezone);
   const {data:logs}=await sb.from('quest_logs').select('quest_id').eq('user_id',OWNER_ID).eq('log_date',today);
   doneToday=new Set((logs||[]).map(l=>l.quest_id));
+  await loadBooks();
+  await loadPhotos();
+  await checkDailyPenalty(today);
+  await loadWeeklyTraining(today);
+  await checkWeeklyBonus(today);
+  await loadSpecial();
+  await checkSpecialQuests();
   render();
+}
+
+/* ---------- QUEST SPECIALI: caricamento, misurazione, completamento ---------- */
+async function loadSpecial(){
+  const {data}=await sb.from('special_quests').select('*').eq('user_id',OWNER_ID);
+  special={}; (data||[]).forEach(r=>special[r.threshold]=r);
+}
+async function measureMetrics(){
+  const [ql, ce, wl, cb, bk] = await Promise.all([
+    sb.from('quest_logs').select('log_date').eq('user_id',OWNER_ID),
+    sb.from('calendar_events').select('starts_at').eq('user_id',OWNER_ID),
+    sb.from('workout_logs').select('log_date').eq('user_id',OWNER_ID),
+    sb.from('xp_events').select('id').eq('user_id',OWNER_ID).eq('reason','combo'),
+    sb.from('books').select('status').eq('user_id',OWNER_ID)
+  ]);
+  const qlogs=ql.data||[];
+  const trainDays=new Set();
+  (ce.data||[]).forEach(e=>{ const d=(e.starts_at||'').slice(0,10); if(d) trainDays.add(d); });
+  (wl.data||[]).forEach(l=>{ if(l.log_date) trainDays.add(l.log_date); });
+  metricNow={
+    quests_total: qlogs.length,
+    active_days: new Set(qlogs.map(l=>l.log_date)).size,
+    perfect_days: (cb.data||[]).length,
+    trainings: trainDays.size,
+    books: (bk.data||[]).filter(b=>b.status==='finished').length
+  };
+  return metricNow;
+}
+async function checkSpecialQuests(){
+  const active=Object.values(special).filter(s=>s.status==='active');
+  if(!active.length) return;
+  const met=await measureMetrics();
+  for(const s of active){
+    const cur=met[s.metric]??0;
+    if(cur>=s.goal){
+      await sb.from('special_quests').update({status:'completed',completed_at:new Date().toISOString()}).eq('id',s.id);
+      const {updated}=await commitXp(s.xp_reward,'special',s.id,profile); profile=updated;
+      s.status='completed'; s.completed_at=new Date().toISOString();
+      specialCompletedModal(s);
+    }
+  }
+}
+function offerSpecial(threshold){
+  if(!CHALLENGES[threshold]) return;   // oltre 80 nessun catalogo
+  if(special[threshold]) return;       // già scelta (definitiva)
+  specialChoiceModal(threshold);
+}
+async function acceptChallenge(threshold, cid){
+  const cat=CHALLENGES[threshold]; if(!cat) return;
+  const ch=cat.options.find(o=>o.id===cid); if(!ch) return;
+  if(special[threshold]){ $('#special').style.display='none'; return; }  // già scelta: definitiva
+  const met=await measureMetrics();
+  const baseline=met[ch.metric]??0;
+  const goal=baseline+ch.target;       // metriche cumulative → obiettivo relativo
+  const row={user_id:OWNER_ID, threshold, challenge_id:ch.id, title:ch.title, description:ch.desc,
+    metric:ch.metric, goal, baseline, xp_reward:ch.xp, status:'active', accepted_at:new Date().toISOString()};
+  const {data,error}=await sb.from('special_quests').insert(row).select();
+  if(error){ toast('Errore, riprova',getVar('--red')); return; }
+  special[threshold]=(data&&data[0])||row;
+  $('#special').style.display='none';
+  toast('SFIDA ACCETTATA',getVar('--violet'));
+  render();
+}
+function specialChoiceModal(threshold){
+  const cat=CHALLENGES[threshold]; if(!cat) return;
+  const dcol={facile:'--green',media:'--gold',difficile:'--red'};
+  const opts=cat.options.map(o=>`
+    <button data-action="accept-ch" data-th="${threshold}" data-cid="${o.id}"
+      style="display:block;width:100%;text-align:left;padding:13px;margin-bottom:10px;cursor:pointer;
+      border:1px solid color-mix(in srgb,var(${dcol[o.diff]}) 45%,transparent);background:color-mix(in srgb,var(${dcol[o.diff]}) 7%,transparent)">
+      <div class="mono" style="font-size:9px;letter-spacing:1px;color:var(${dcol[o.diff]})">${o.diff.toUpperCase()} · +${o.xp} XP</div>
+      <div style="font-family:var(--disp);font-size:17px;font-weight:700;color:var(--glow);margin:4px 0">${esc(o.title)}</div>
+      <div class="mono" style="font-size:11px;color:var(--text);line-height:1.5">${esc(o.desc)}</div></button>`).join('');
+  const box=`<div class="box"><div style="padding:10px 14px;border-bottom:1px solid color-mix(in srgb,var(--violet) 35%,transparent);display:flex;justify-content:space-between;align-items:center">
+    <span class="mono" style="font-size:11px;letter-spacing:2px;color:var(--violet)">⚠ QUEST SPECIALE · LIVELLO ${threshold}</span>
+    <button data-action="close-special" style="background:none;border:none;color:var(--dim);font-size:16px">✕</button></div>
+    <div style="padding:18px;max-height:72vh;overflow-y:auto">
+      <div class="mono" style="font-size:11px;color:var(--dim);line-height:1.6;margin-bottom:16px">${esc(cat.intro)}<br><span style="color:var(--gold)">Scegli UNA sfida — la scelta è definitiva.</span></div>
+      ${opts}</div></div>`;
+  const m=$('#special'); m.innerHTML=box; m.style.display='grid';
+}
+function specialCompletedModal(s){
+  const box=`<div class="box" style="border-color:var(--green);box-shadow:0 0 40px -6px var(--green),inset 0 0 40px -20px var(--green)">
+    <div style="padding:10px 14px;border-bottom:1px solid color-mix(in srgb,var(--green) 35%,transparent);display:flex;justify-content:space-between;align-items:center">
+      <span class="mono" style="font-size:11px;letter-spacing:2px;color:var(--green)">✔ SFIDA COMPLETATA</span>
+      <button data-action="close-special" style="background:none;border:none;color:var(--dim);font-size:16px">✕</button></div>
+    <div style="padding:22px;text-align:center">
+      <div style="font-family:var(--disp);font-size:24px;font-weight:800;color:var(--glow);text-shadow:0 0 20px var(--green);line-height:1.1;margin-bottom:12px">${esc(s.title)}</div>
+      <div style="font-family:var(--num);font-size:30px;font-weight:800;color:var(--green);text-shadow:0 0 18px var(--green);margin-bottom:14px">+${s.xp_reward} XP</div>
+      <div class="mono" style="font-size:12px;color:var(--text);line-height:1.6;margin-bottom:20px">Hai superato la prova della soglia ${s.threshold}.<br>Il Sistema riconosce la tua ascesa.</div>
+      <button class="btnfull" data-action="close-special" style="background:linear-gradient(90deg,var(--green),var(--glow))">RISCUOTI</button></div></div>`;
+  const m=$('#special'); m.innerHTML=box; m.style.display='grid';
+}
+
+/* ---------- quest settimanale: 3 allenamenti (lun-dom) ---------- */
+function weekBounds(todayStr){
+  const [y,m,d]=todayStr.split('-').map(Number);
+  const dow=(new Date(y,m-1,d).getDay()+6)%7;          // lunedì = 0
+  const mon=new Date(y,m-1,d-dow), sun=new Date(y,m-1,d-dow+6);
+  return {monday:iso(mon), sunday:iso(sun)};
+}
+async function loadWeeklyTraining(today){
+  const {monday,sunday}=weekBounds(today);
+  const days=new Set();
+  // 1) giorni segnati nel calendario (allenamenti)
+  const {data:cal}=await sb.from('calendar_events').select('starts_at').eq('user_id',OWNER_ID);
+  (cal||[]).forEach(e=>{ const d=(e.starts_at||'').slice(0,10); if(d>=monday && d<=sunday) days.add(d); });
+  // 2) giorni in cui ho salvato un peso nelle schede
+  const {data:wl}=await sb.from('workout_logs').select('log_date').eq('user_id',OWNER_ID)
+    .gte('log_date',monday).lte('log_date',sunday);
+  (wl||[]).forEach(l=>{ if(l.log_date) days.add(l.log_date); });
+  weekTrained=days.size;
+}
+async function checkWeeklyBonus(today){
+  weeklyBonusJustGiven=false;
+  const {monday}=weekBounds(today);
+  if(weekTrained>=WEEKLY_TARGET && profile.last_weekly_bonus_week!==monday){
+    const {updated}=await commitXp(WEEKLY_BONUS,'weekly_bonus',null,profile);
+    await sb.from('profiles').update({last_weekly_bonus_week:monday}).eq('id',OWNER_ID);
+    profile={...updated,last_weekly_bonus_week:monday};
+    weeklyBonusJustGiven=true;
+    toast(WEEKLY_TARGET+' ALLENAMENTI · +'+WEEKLY_BONUS+' XP',getVar('--gold'));
+  }
+}
+async function refreshWeekly(){
+  const today=localDate(profile.timezone);
+  await loadWeeklyTraining(today);
+  await checkWeeklyBonus(today);
+  await checkSpecialQuests();
+}
+
+/* ---------- penalità automatica: controllo giornaliero all'avvio ---------- */
+async function checkDailyPenalty(today){
+  if(profile.last_penalty_check===today) return;           // già controllato oggi
+  if(!profile.last_penalty_check){                          // primissimo avvio con questa funzione: non punire a sorpresa
+    await sb.from('profiles').update({last_penalty_check:today}).eq('id',OWNER_ID);
+    profile.last_penalty_check=today;
+    return;
+  }
+  const d=new Date(today); d.setDate(d.getDate()-1);
+  const yesterday=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const {data:ylogs}=await sb.from('quest_logs').select('quest_id').eq('user_id',OWNER_ID).eq('log_date',yesterday);
+  const skippedAllDay = !ylogs || ylogs.length===0;
+  if(skippedAllDay){
+    const {updated}=await commitXp(-SKIP_PENALTY,'penalty_auto',null,profile);
+    await sb.from('profiles').update({streak_count:0,last_penalty_check:today}).eq('id',OWNER_ID);
+    profile={...updated,streak_count:0,last_penalty_check:today};
+    penaltyModal(yesterday);
+  }else{
+    await sb.from('profiles').update({last_penalty_check:today}).eq('id',OWNER_ID);
+    profile.last_penalty_check=today;
+  }
+}
+function penaltyModal(dayStr){
+  const box=`<div class="box"><div style="padding:10px 14px;border-bottom:1px solid rgba(255,84,104,.35);display:flex;justify-content:space-between;align-items:center">
+    <span class="mono" style="font-size:11px;letter-spacing:2px;color:var(--red)">⚠ AVVISO DEL SISTEMA</span>
+    <button data-action="close-special" style="background:none;border:none;color:var(--dim);font-size:16px">✕</button></div>
+    <div style="padding:22px;text-align:center">
+      <div style="font-family:var(--num);font-size:15px;letter-spacing:3px;color:var(--red);margin-bottom:6px">GIORNATA SALTATA</div>
+      <div class="mono" style="font-size:12px;color:var(--text);line-height:1.6;margin-bottom:20px">
+        Il ${esc(dayStr.split('-').reverse().join('/'))} non hai completato nessuna quest.<br>
+        Penalità applicata: <span style="color:var(--red)">−${SKIP_PENALTY} XP</span><br>Streak azzerata.</div>
+      <button class="btnfull" data-action="close-special">HO CAPITO</button></div></div>`;
+  const m=$('#special'); m.innerHTML=box; m.style.display='grid';
+}
+
+/* ---------- libreria: caricamento libri ---------- */
+async function loadBooks(){
+  const {data}=await sb.from('books').select('*').eq('user_id',OWNER_ID)
+    .order('created_at',{ascending:false});
+  books=data||[]; libLoaded=true;
+}
+
+/* ---------- foto milestone: caricamento ---------- */
+async function loadPhotos(){
+  const {data}=await sb.from('progress_photos').select('*').eq('user_id',OWNER_ID);
+  photos={};
+  (data||[]).forEach(p=>{
+    const {data:pub}=sb.storage.from(PHOTO_BUCKET).getPublicUrl(p.path);
+    const bust = p.created_at ? new Date(p.created_at).getTime() : 0;
+    photos[p.level]={ path:p.path, url:pub.publicUrl+'?t='+bust };
+  });
+}
+function pickPhoto(level){
+  uploadLevel=level;
+  const inp=document.getElementById('photoInput');
+  if(inp) inp.click();
+}
+async function uploadPhoto(file, level){
+  if(!file) return;
+  toast('Carico la foto…',getVar('--sys'));
+  const path=OWNER_ID+'/lvl-'+level+'.jpg';
+  const {error:upErr}=await sb.storage.from(PHOTO_BUCKET)
+    .upload(path, file, {upsert:true, contentType:file.type||'image/jpeg'});
+  if(upErr){ toast('Errore caricamento',getVar('--red')); return; }
+  const {error:dbErr}=await sb.from('progress_photos')
+    .upsert({user_id:OWNER_ID, level, path, created_at:new Date().toISOString()},{onConflict:'user_id,level'});
+  if(dbErr){ toast('Errore salvataggio',getVar('--red')); return; }
+  await loadPhotos();
+  $('#special').style.display='none';
+  toast('Foto salvata',getVar('--green'));
+  render();
+}
+async function delPhoto(level){
+  if(!confirm('Vuoi eliminare questa foto milestone?')) return;
+  const p=photos[level];
+  if(p) await sb.storage.from(PHOTO_BUCKET).remove([p.path]);
+  await sb.from('progress_photos').delete().eq('user_id',OWNER_ID).eq('level',level);
+  await loadPhotos();
+  $('#special').style.display='none';
+  toast('Foto eliminata',getVar('--dim'));
+  render();
+}
+function photoModal(level){
+  const p=photos[level];
+  const img = p ? `<img src="${p.url}" alt="Milestone Lv.${level}"
+      style="width:100%;display:block;max-height:58vh;object-fit:contain;background:#05070F">` : '';
+  const box=`<div class="box"><div style="padding:10px 14px;border-bottom:1px solid color-mix(in srgb,var(--violet) 35%,transparent);display:flex;justify-content:space-between;align-items:center">
+    <span class="mono" style="font-size:11px;letter-spacing:2px;color:var(--violet)">◈ MILESTONE · LIVELLO ${level}</span>
+    <button data-action="close-special" style="background:none;border:none;color:var(--dim);font-size:16px">✕</button></div>
+    ${img}
+    <div style="padding:16px;display:flex;gap:8px">
+      <button class="mono" data-action="repphoto" data-level="${level}"
+        style="flex:1;padding:11px;font-size:11px;letter-spacing:1px;color:var(--sys);border:1px solid color-mix(in srgb,var(--sys) 45%,transparent);background:color-mix(in srgb,var(--sys) 7%,transparent)">SOSTITUISCI</button>
+      <button class="mono" data-action="delphoto" data-level="${level}"
+        style="padding:11px 16px;font-size:11px;letter-spacing:1px;color:var(--red);border:1px solid rgba(255,84,104,.4);background:rgba(255,84,104,.05)">ELIMINA</button>
+    </div></div>`;
+  const m=$('#special'); m.innerHTML=box; m.style.display='grid';
 }
 
 /* ---------- scrittura XP: ledger + cache profilo ---------- */
@@ -253,13 +543,14 @@ async function completeQuest(id){
   if(error){ doneToday.delete(id); toast('Errore, riprova',getVar('--red')); render(); return; }
   let {updated,res}=await commitXp(q.xp_value,'quest',id,profile); profile=updated;
   toast('+'+q.xp_value+' XP · '+q.category, CAT[q.category].c);
-  if(res.newMilestone) showSpecial(res.newMilestone);
   if(quests.every(x=>doneToday.has(x.id))){
     const combo=await commitXp(COMBO_BONUS,'combo',null,profile); profile=combo.updated;
     setTimeout(()=>toast('COMBO GIORNALIERA +'+COMBO_BONUS+' XP',getVar('--gold')),750);
-    if(combo.res.newMilestone) showSpecial(combo.res.newMilestone);
     await bumpStreak(profile,today);
+    if(combo.res.newMilestone) res={...res,newMilestone:combo.res.newMilestone};
   }
+  await checkSpecialQuests();
+  if(res.newMilestone) offerSpecial(res.newMilestone);
   render();
 }
 async function skipDay(){
@@ -268,6 +559,115 @@ async function skipDay(){
   profile={...updated,streak_count:0}; toast('PENALITÀ −'+SKIP_PENALTY+' XP',getVar('--red')); render();
 }
 const getVar=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+/* ---------- GESTIONE QUEST (aggiungi/modifica/attiva/riordina) ---------- */
+async function loadAllQuests(){
+  const {data}=await sb.from('quests').select('*').eq('frequency','daily').order('sort_order');
+  allQuests=data||[]; manageLoaded=true;
+}
+function openQuestForm(id){
+  editingQuestId=id||null;
+  const q = id ? allQuests.find(x=>x.id===id) : null;
+  const cats=Object.keys(CAT);
+  const box=`<div class="box"><div style="padding:10px 14px;border-bottom:1px solid color-mix(in srgb,var(--violet) 35%,transparent);display:flex;justify-content:space-between;align-items:center">
+    <span class="mono" style="font-size:11px;letter-spacing:2px;color:var(--violet)">${id?'✎ MODIFICA QUEST':'＋ NUOVA QUEST'}</span>
+    <button data-action="close-special" style="background:none;border:none;color:var(--dim);font-size:16px">✕</button></div>
+    <div style="padding:18px;max-height:64vh;overflow-y:auto">
+      <div class="mono" style="font-size:10px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">NOME</div>
+      <input data-q="title" value="${esc(q?.title||'')}" placeholder="Es. Allenamento"
+        style="width:100%;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--glow);font-size:14px;padding:10px;outline:none;margin-bottom:14px">
+      <div class="mono" style="font-size:10px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">SOTTOTITOLO</div>
+      <input data-q="subtitle" value="${esc(q?.subtitle||'')}" placeholder="Facoltativo"
+        style="width:100%;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--glow);font-size:14px;padding:10px;outline:none;margin-bottom:14px">
+      <div class="mono" style="font-size:10px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">CATEGORIA</div>
+      <select data-q="category" style="width:100%;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--glow);font-size:14px;padding:10px;outline:none;margin-bottom:14px">
+        ${cats.map(c=>`<option value="${c}" ${q?.category===c?'selected':''}>${c.charAt(0).toUpperCase()+c.slice(1)}</option>`).join('')}
+      </select>
+      <div class="mono" style="font-size:10px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">XP (10–50)</div>
+      <input data-q="xp" type="number" min="10" max="50" value="${q?.xp_value??20}"
+        style="width:100%;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--glow);font-size:14px;padding:10px;outline:none;margin-bottom:20px">
+      <button class="btnfull" data-action="save-quest">${id?'SALVA MODIFICHE':'AGGIUNGI QUEST'}</button>
+    </div></div>`;
+  const m=$('#special'); m.innerHTML=box; m.style.display='grid';
+  setTimeout(()=>{ const i=$('#special input[data-q="title"]'); if(i) i.focus(); },60);
+}
+async function saveQuestForm(){
+  const ti=$('#special input[data-q="title"]'), si=$('#special input[data-q="subtitle"]');
+  const ci=$('#special select[data-q="category"]'), xi=$('#special input[data-q="xp"]');
+  const title=(ti?ti.value:'').trim(), subtitle=(si?si.value:'').trim();
+  const category=ci?ci.value:'sport'; let xp=parseInt(xi?xi.value:'20',10);
+  if(!title){ toast('Scrivi il nome della quest',getVar('--red')); return; }
+  if(isNaN(xp)) xp=20; xp=Math.max(10,Math.min(50,xp));
+  if(editingQuestId){
+    const {error}=await sb.from('quests').update({title,subtitle:subtitle||null,category,xp_value:xp}).eq('id',editingQuestId);
+    if(error){ toast('Errore salvataggio',getVar('--red')); return; }
+    toast('Quest aggiornata',getVar('--green'));
+  }else{
+    const maxOrder=allQuests.reduce((m,q)=>Math.max(m,q.sort_order||0),0);
+    const {error}=await sb.from('quests').insert({title,subtitle:subtitle||null,category,xp_value:xp,
+      frequency:'daily',is_active:true,sort_order:maxOrder+1});
+    if(error){ toast('Errore salvataggio',getVar('--red')); return; }
+    toast('Quest aggiunta',getVar('--green'));
+  }
+  $('#special').style.display='none';
+  await loadAllQuests();
+  const {data:qs}=await sb.from('quests').select('*').eq('is_active',true).eq('frequency','daily').order('sort_order');
+  quests=qs||[];
+  render();
+}
+async function toggleQuestActive(id){
+  const q=allQuests.find(x=>x.id===id); if(!q) return;
+  const {error}=await sb.from('quests').update({is_active:!q.is_active}).eq('id',id);
+  if(error){ toast('Errore, riprova',getVar('--red')); return; }
+  await loadAllQuests();
+  const {data:qs}=await sb.from('quests').select('*').eq('is_active',true).eq('frequency','daily').order('sort_order');
+  quests=qs||[];
+  toast(q.is_active?'Quest disattivata':'Quest riattivata',getVar('--dim'));
+  render();
+}
+async function moveQuest(id,dir){
+  const idx=allQuests.findIndex(x=>x.id===id); if(idx<0) return;
+  const swapIdx=idx+dir; if(swapIdx<0||swapIdx>=allQuests.length) return;
+  const a=allQuests[idx], b=allQuests[swapIdx];
+  const aOrder=a.sort_order??idx, bOrder=b.sort_order??swapIdx;
+  await Promise.all([
+    sb.from('quests').update({sort_order:bOrder}).eq('id',a.id),
+    sb.from('quests').update({sort_order:aOrder}).eq('id',b.id)
+  ]);
+  await loadAllQuests();
+  const {data:qs}=await sb.from('quests').select('*').eq('is_active',true).eq('frequency','daily').order('sort_order');
+  quests=qs||[];
+  render();
+}
+function viewManageQuests(){
+  if(!manageLoaded){ loadAllQuests().then(render); return `<div class="row mb14">
+      <div><div class="lbl dim">Configurazione</div><div class="hi">Gestisci Quest</div></div></div>
+      <div class="mono" style="font-size:12px;color:var(--dim)">caricamento…</div>`; }
+  const rows=allQuests.map((q,i)=>{
+    const m=CAT[q.category]||CAT.cultura;
+    return `<div class="panel" style="--pg:${q.is_active?m.c:'var(--dim)'};padding:12px;opacity:${q.is_active?1:.55}">
+      <div class="row" style="align-items:flex-start">
+        <div style="flex:1;min-width:0">
+          <b style="font-family:var(--disp);font-size:15px">${esc(q.title)}</b>
+          <div class="mono" style="font-size:10px;color:var(--dim);margin-top:2px">${esc(q.subtitle||'')}</div>
+          <div class="mono" style="font-size:10px;color:${m.c};margin-top:4px">${q.category} · +${q.xp_value} XP${q.is_active?'':' · DISATTIVA'}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <button data-action="qup" data-id="${q.id}" style="background:none;border:1px solid var(--line);color:var(--dim);width:26px;height:26px;font-size:11px" ${i===0?'disabled':''}>▲</button>
+          <button data-action="qdown" data-id="${q.id}" style="background:none;border:1px solid var(--line);color:var(--dim);width:26px;height:26px;font-size:11px" ${i===allQuests.length-1?'disabled':''}>▼</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="mono" data-action="qedit" data-id="${q.id}" style="flex:1;padding:8px;font-size:11px;letter-spacing:1px;color:var(--sys);border:1px solid color-mix(in srgb,var(--sys) 45%,transparent);background:color-mix(in srgb,var(--sys) 7%,transparent)">✎ MODIFICA</button>
+        <button class="mono" data-action="qtoggle" data-id="${q.id}" style="flex:1;padding:8px;font-size:11px;letter-spacing:1px;color:${q.is_active?'var(--red)':'var(--green)'};border:1px solid ${q.is_active?'rgba(255,84,104,.4)':'color-mix(in srgb,var(--green) 45%,transparent)'};background:transparent">${q.is_active?'✕ DISATTIVA':'✔ RIATTIVA'}</button>
+      </div></div>`;
+  }).join('');
+  return `<div class="row mb14">
+      <div><div class="lbl dim">Configurazione</div><div class="hi">Gestisci Quest</div></div>
+      <button class="mono" data-action="backtome" style="padding:8px 12px;color:var(--sys);border:1px solid var(--line);background:transparent;font-size:11px">‹ Profilo</button></div>
+    <button class="mono" data-action="qnew" style="width:100%;padding:12px;margin-bottom:18px;font-size:12px;letter-spacing:2px;color:var(--sys);border:1px dashed var(--sys);background:rgba(67,180,255,.05)">＋ NUOVA QUEST</button>
+    <div class="stack">${rows}</div>`;
+}
 
 /* ---------- rendering ---------- */
 function render(){
@@ -278,16 +678,22 @@ function render(){
   else if(tab==='cal') s.innerHTML=viewCalendar();
   else if(tab==='lib') s.innerHTML=viewLibrary();
   else if(tab==='me') s.innerHTML=viewProfile();
+  else if(tab==='manage') s.innerHTML=viewManageQuests();
 }
 
 function viewHome(){
   const need=xpNeeded(profile.level), pct=Math.min(100,profile.current_xp/need*100);
   const done=[...doneToday].filter(id=>quests.some(q=>q.id===id)).length;
+  const readingBook=books.find(b=>b.status==='reading');
   const qcards=quests.map(q=>{
     const m=CAT[q.category]||CAT.cultura, isDone=doneToday.has(q.id);
+    let sub=q.subtitle||'';
+    if(readingBook && /pagin|legg/i.test((q.title||'')+' '+(q.subtitle||''))){
+      sub='In lettura: '+readingBook.title;
+    }
     return `<div class="panel q ${isDone?'done':''}" style="--cat:${m.c};--pg:${m.c}" data-action="quest" data-id="${q.id}">
       <div class="ic">${m.ic}</div>
-      <div class="t"><b>${esc(q.title)}</b><span>${esc(q.subtitle||'')}</span></div>
+      <div class="t"><b>${esc(q.title)}</b><span>${esc(sub)}</span></div>
       <div class="xp">+${q.xp_value}</div>
       <div class="ck">${isDone?'✔':''}</div></div>`;
   }).join('');
@@ -305,6 +711,12 @@ function viewHome(){
         <div class="row mono" style="font-size:10px;color:var(--dim);margin-bottom:5px"><span>XP</span><span>${profile.current_xp} / ${need}</span></div>
         <div class="bar"><i style="width:${pct}%"></i></div>
       </div>
+    </div>
+    <div class="panel mb16" style="--pg:var(--green)">
+      <div class="row mono" style="font-size:10px;margin-bottom:7px">
+        <span style="color:var(--green);letter-spacing:1px">💪 ALLENAMENTI · SETTIMANA</span>
+        <span style="color:${weekTrained>=WEEKLY_TARGET?'var(--green)':'var(--dim)'}">${Math.min(weekTrained,WEEKLY_TARGET)}/${WEEKLY_TARGET}${weekTrained>=WEEKLY_TARGET?' ✓':''}</span></div>
+      <div class="bar"><i style="width:${Math.min(100,weekTrained/WEEKLY_TARGET*100)}%;background:linear-gradient(90deg,var(--green),var(--glow));box-shadow:0 0 12px var(--green)"></i></div>
     </div>
     <div class="row" style="margin-bottom:8px"><div class="lbl">Quest Giornaliere</div>
       <span class="mono" style="font-size:11px;color:${done===quests.length?'var(--green)':'var(--dim)'}">${done}/${quests.length}</span></div>
@@ -336,7 +748,8 @@ async function saveWeight(exId,btn){
   if(error){ toast('Errore salvataggio',getVar('--red')); return; }
   lastWeights[exId]=val; inp.value='';
   btn.textContent='✔ OK'; btn.style.color=getVar('--green'); btn.style.borderColor=getVar('--green');
-  toast(val+' kg salvati',getVar('--green'));
+  await refreshWeekly();
+  if(!weeklyBonusJustGiven) toast(val+' kg salvati',getVar('--green'));
   setTimeout(()=>render(),900);
 }
 
@@ -390,6 +803,7 @@ async function toggleTraining(day){
       type:'allenamento',starts_at:day+'T08:00:00+02:00',all_day:true}).select();
     events[day]=data||[{}]; toast('Allenamento aggiunto',getVar('--sys'));
   }
+  await refreshWeekly();
   $('#special').style.display='none'; render();
 }
 async function setOverride(day,kind){
@@ -478,27 +892,112 @@ function viewCalendar(){
       <div class="mono" style="font-size:9px;color:var(--dim);margin-top:4px">${27-ferieCount} giorni disponibili</div></div>
     <div class="mono" style="font-size:9px;color:var(--dim);margin-top:10px;text-align:center">tocca un giorno per ferie o richiamo</div>`;
 }
-function viewLibrary(){
-  const books=[['Il Conte di Montecristo','Dumas','in lettura','--violet'],['The Intelligent Investor','Graham','Giu 2026','--gold'],
-    ['Padre Ricco Padre Povero','Kiyosaki','Mag 2026','--gold'],['Meditazioni','M. Aurelio','Apr 2026','--green'],
-    ['Sapiens','Harari','Mar 2026','--sys'],['1984','Orwell','Feb 2026','--sys']];
-  const cards=books.map(([t,a,d,c])=>`<div class="panel" style="--pg:var(${c});padding:12px;min-height:118px;display:flex;flex-direction:column;justify-content:space-between">
-    <div><div style="width:26px;height:3px;background:var(${c});box-shadow:0 0 8px var(${c});margin-bottom:10px"></div>
-    <b style="font-family:var(--disp);font-size:14px">${t}</b><div class="mono" style="font-size:10px;color:var(--dim);margin-top:2px">${a}</div></div>
-    <div class="mono" style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--dim)">${d}</div></div>`).join('');
-  return `<div class="row mb14"><div><div class="lbl dim">Memoria</div><div class="hi">Libreria</div></div>
-    <div style="font-family:var(--num);font-size:20px;color:var(--glow)">12</div></div><div class="grid2">${cards}</div>`;
+
+/* ---- LIBRERIA (collegata al database) ---- */
+async function saveBook(){
+  const ti=$('#special input[data-book="title"]'), ai=$('#special input[data-book="author"]');
+  const t=(ti?ti.value:'').trim(), a=(ai?ai.value:'').trim();
+  if(!t){ toast('Scrivi almeno il titolo',getVar('--red')); return; }
+  const {error}=await sb.from('books').insert({user_id:OWNER_ID,title:t,author:a||null,status:'reading'});
+  if(error){ toast('Errore salvataggio',getVar('--red')); return; }
+  $('#special').style.display='none';
+  await loadBooks(); toast('Libro aggiunto',getVar('--sys')); render();
 }
+async function finishBook(id){
+  const today=localDate(profile.timezone);
+  const {error}=await sb.from('books').update({status:'finished',finished_date:today}).eq('id',id);
+  if(error){ toast('Errore, riprova',getVar('--red')); return; }
+  await loadBooks(); await checkSpecialQuests(); toast('Libro completato!',getVar('--green')); render();
+}
+async function delBook(id){
+  if(!confirm('Vuoi eliminare questo libro dalla libreria?')) return;
+  const {error}=await sb.from('books').delete().eq('id',id);
+  if(error){ toast('Errore, riprova',getVar('--red')); return; }
+  await loadBooks(); toast('Libro eliminato',getVar('--dim')); render();
+}
+function bookForm(){
+  const box=`<div class="box"><div style="padding:10px 14px;border-bottom:1px solid color-mix(in srgb,var(--violet) 35%,transparent);display:flex;justify-content:space-between;align-items:center">
+    <span class="mono" style="font-size:11px;letter-spacing:2px;color:var(--violet)">＋ NUOVO LIBRO</span>
+    <button data-action="close-special" style="background:none;border:none;color:var(--dim);font-size:16px">✕</button></div>
+    <div style="padding:18px">
+      <div class="mono" style="font-size:10px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">TITOLO</div>
+      <input data-book="title" placeholder="Titolo del libro"
+        style="width:100%;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--glow);font-size:14px;padding:10px;outline:none;margin-bottom:14px">
+      <div class="mono" style="font-size:10px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">AUTORE</div>
+      <input data-book="author" placeholder="Autore (facoltativo)"
+        style="width:100%;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--glow);font-size:14px;padding:10px;outline:none;margin-bottom:20px">
+      <button class="btnfull" data-action="save-book">AGGIUNGI ALLA LIBRERIA</button>
+    </div></div>`;
+  const m=$('#special'); m.innerHTML=box; m.style.display='grid';
+  setTimeout(()=>{ const i=$('#special input[data-book="title"]'); if(i) i.focus(); },60);
+}
+
+function viewLibrary(){
+  if(!libLoaded){
+    return `<div class="row mb14"><div><div class="lbl dim">Memoria</div><div class="hi">Libreria</div></div></div>
+      <div class="mono" style="font-size:12px;color:var(--dim)">caricamento…</div>`;
+  }
+  const reading=books.filter(b=>b.status==='reading');
+  const finished=books.filter(b=>b.status==='finished')
+    .sort((a,b)=>(b.finished_date||'').localeCompare(a.finished_date||''));
+
+  const readCards = reading.length ? reading.map(b=>`
+    <div class="panel" style="--pg:var(--violet);padding:14px;margin-bottom:9px">
+      <div style="width:26px;height:3px;background:var(--violet);box-shadow:0 0 8px var(--violet);margin-bottom:10px"></div>
+      <b style="font-family:var(--disp);font-size:16px">${esc(b.title)}</b>
+      <div class="mono" style="font-size:10px;color:var(--dim);margin-top:2px">${esc(b.author||'—')}</div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button class="mono" data-action="finish-book" data-id="${b.id}"
+          style="flex:1;padding:9px;font-size:11px;letter-spacing:1px;color:var(--green);border:1px solid color-mix(in srgb,var(--green) 45%,transparent);background:color-mix(in srgb,var(--green) 7%,transparent)">✔ SEGNA FINITO</button>
+        <button class="mono" data-action="del-book" data-id="${b.id}"
+          style="padding:9px 13px;font-size:12px;color:var(--red);border:1px solid rgba(255,84,104,.35);background:transparent">🗑</button>
+      </div></div>`).join('')
+    : `<div class="panel" style="--pg:var(--dim);padding:14px"><div class="mono" style="font-size:11px;color:var(--dim);line-height:1.7">Nessun libro in lettura.<br>Tocca “＋ Aggiungi libro” per iniziare.</div></div>`;
+
+  const finCards = finished.map(b=>`
+    <div class="panel" style="--pg:var(--gold);padding:12px;min-height:118px;display:flex;flex-direction:column;justify-content:space-between">
+      <div><div style="width:26px;height:3px;background:var(--gold);box-shadow:0 0 8px var(--gold);margin-bottom:10px"></div>
+      <b style="font-family:var(--disp);font-size:14px">${esc(b.title)}</b>
+      <div class="mono" style="font-size:10px;color:var(--dim);margin-top:2px">${esc(b.author||'—')}</div></div>
+      <div class="row" style="align-items:flex-end;margin-top:8px">
+        <span class="mono" style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--dim)">${fmtBookDate(b.finished_date)}</span>
+        <button data-action="del-book" data-id="${b.id}" style="background:none;border:none;color:var(--dim);font-size:13px;padding:0;cursor:pointer">🗑</button>
+      </div></div>`).join('');
+
+  return `<div class="row mb14">
+      <div><div class="lbl dim">Memoria</div><div class="hi">Libreria</div></div>
+      <div style="text-align:right"><div style="font-family:var(--num);font-size:20px;color:var(--glow)">${finished.length}</div>
+      <div class="mono" style="font-size:8px;color:var(--dim);letter-spacing:1px">LETTI</div></div></div>
+    <button class="mono" data-action="addbook" style="width:100%;padding:12px;margin-bottom:18px;font-size:12px;letter-spacing:2px;color:var(--sys);border:1px dashed var(--sys);background:rgba(67,180,255,.05)">＋ AGGIUNGI LIBRO</button>
+    <div class="lbl" style="color:var(--violet)">In lettura</div>
+    <div class="mt8 mb18">${readCards}</div>
+    ${finished.length?`<div class="lbl" style="color:var(--gold)">Finiti</div><div class="grid2 mt8">${finCards}</div>`:''}`;
+}
+
 function viewProfile(){
   const done=[...doneToday].filter(id=>quests.some(q=>q.id===id)).length;
   const stats=[['Streak',profile.streak_count+'g','--gold'],['Quest oggi',done+'/'+quests.length,'--sys'],['Lv. max',profile.max_level_reached,'--violet']];
-  const ms=[1,20,40,60,80].map(m=>{const u=profile.max_level_reached>=m;
-    return `<div style="flex:0 0 auto;width:92px"><div style="height:116px;border:1px solid ${u?'var(--glow)':'var(--line)'};
-      background:${u?'linear-gradient(160deg,rgba(67,180,255,.13),transparent)':'rgba(255,255,255,.02)'};
-      display:grid;place-items:center;color:${u?'var(--glow)':'var(--dim)'};position:relative">
-      <span style="font-size:26px">${u?'◈':'🔒'}</span>
-      <span class="mono" style="position:absolute;bottom:6px;font-size:9px;color:${u?'var(--glow)':'var(--dim)'}">${u?'SCATTA':'BLOCCATA'}</span></div>
-      <div style="text-align:center;font-family:var(--disp);font-size:13px;font-weight:600;color:${u?'var(--text)':'var(--dim)'};margin-top:6px">Lv. ${m}</div></div>`;}).join('');
+  const ms=[1,20,40,60,80].map(m=>{
+    const u=profile.max_level_reached>=m, ph=photos[m];
+    let inner, action='';
+    if(ph){
+      inner=`<div style="position:absolute;inset:0;background-image:url('${ph.url}');background-size:cover;background-position:center"></div>
+        <span class="mono" style="position:absolute;bottom:5px;left:6px;font-size:9px;color:var(--glow);text-shadow:0 0 4px #000,0 0 4px #000">LV.${m}</span>`;
+      action=`data-action="viewphoto" data-level="${m}"`;
+    } else if(u){
+      inner=`<span style="font-size:26px;color:var(--sys)">＋</span>
+        <span class="mono" style="position:absolute;bottom:6px;font-size:9px;color:var(--sys)">AGGIUNGI</span>`;
+      action=`data-action="addphoto" data-level="${m}"`;
+    } else {
+      inner=`<span style="font-size:26px">🔒</span>
+        <span class="mono" style="position:absolute;bottom:6px;font-size:9px;color:var(--dim)">BLOCCATA</span>`;
+    }
+    return `<div style="flex:0 0 auto;width:92px">
+      <div ${action} style="height:116px;border:1px solid ${u?'var(--glow)':'var(--line)'};cursor:${u?'pointer':'default'};
+      background:${u&&!ph?'linear-gradient(160deg,rgba(67,180,255,.13),transparent)':'rgba(255,255,255,.02)'};
+      display:grid;place-items:center;color:${u?'var(--glow)':'var(--dim)'};position:relative;overflow:hidden">${inner}</div>
+      <div style="text-align:center;font-family:var(--disp);font-size:13px;font-weight:600;color:${u?'var(--text)':'var(--dim)'};margin-top:6px">Lv. ${m}</div></div>`;
+  }).join('');
   return `<div class="lbl dim">Scheda Cacciatore</div><div class="hi mb14">Il mio percorso</div>
     <div class="panel mb16" style="--pg:var(--violet);display:flex;gap:14px;align-items:center">
       <div style="width:74px;height:88px;flex:0 0 auto;border:1px solid color-mix(in srgb,var(--violet) 40%,transparent);
@@ -508,27 +1007,48 @@ function viewProfile(){
     <div style="display:flex;gap:8px" class="mb18">${stats.map(([l,v,c])=>`<div class="panel" style="--pg:var(${c});flex:1;padding:10px;text-align:center">
       <div style="font-family:var(--num);font-size:18px;color:var(${c})">${v}</div>
       <div class="mono" style="font-size:9px;color:var(--dim);letter-spacing:1px;margin-top:3px">${l.toUpperCase()}</div></div>`).join('')}</div>
+    ${specialSection()}
     <div class="lbl">Archivio Estetico</div>
     <div class="mono" style="font-size:10px;color:var(--dim);margin:4px 0 10px">una foto ogni 20 livelli</div>
     <div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:6px">${ms}</div>
+    <button class="mono" data-action="gotomanage" style="width:100%;padding:12px;margin-top:4px;font-size:12px;letter-spacing:2px;color:var(--violet);border:1px solid color-mix(in srgb,var(--violet) 45%,transparent);background:color-mix(in srgb,var(--violet) 6%,transparent)">⚙ GESTISCI QUEST</button>
     <div style="margin-top:22px;padding-top:14px;border-top:1px solid var(--line)">
       <div class="mono" style="font-size:9px;color:var(--dim);letter-spacing:1px;margin-bottom:8px">DEMO · SIMULA FLUTTUAZIONE</div>
-      <button class="demo" data-action="skip">✕ QUEST GIORNALIERA SALTATA (−${SKIP_PENALTY} XP)</button></div>`;
+      <button class="demo" data-action="skip">✕ QUEST GIORNALIERA SALTATA (−${SKIP_PENALTY} XP)</button>
+      <div class="mono" style="font-size:9px;color:var(--dim);text-align:center;margin-top:12px">versione ${APP_VERSION}</div></div>`;
 }
 
-/* ---------- special quest modal ---------- */
-function showSpecial(level){
-  const box=`<div class="box"><div style="padding:10px 14px;border-bottom:1px solid color-mix(in srgb,var(--violet) 35%,transparent);display:flex;justify-content:space-between;align-items:center">
-    <span class="mono" style="font-size:11px;letter-spacing:2px;color:var(--violet)">⚠ AVVISO DEL SISTEMA</span>
-    <button data-action="close-special" style="background:none;border:none;color:var(--dim);font-size:16px">✕</button></div>
-    <div style="padding:22px;text-align:center">
-      <div style="font-family:var(--num);font-size:15px;letter-spacing:3px;color:var(--violet);margin-bottom:6px">QUEST SPECIALE</div>
-      <div style="font-family:var(--disp);font-size:26px;font-weight:800;color:var(--glow);text-shadow:0 0 20px var(--sys);line-height:1.05;margin-bottom:14px">LIVELLO ${level}<br>RAGGIUNTO</div>
-      <div class="mono" style="font-size:12px;color:var(--text);line-height:1.6;margin-bottom:20px">
-        Hai superato una soglia.<br>Sblocca: <span style="color:var(--glow)">foto milestone Lv.${level}</span><br>
-        Nuova sfida: <span style="color:var(--gold)">7 giorni di streak perfetta</span></div>
-      <button class="btnfull" data-action="close-special">ACCETTA</button></div></div>`;
-  const m=$('#special'); m.innerHTML=box; m.style.display='grid';
+/* ---------- sezione Quest Speciali nel Profilo ---------- */
+function specialSection(){
+  const ths=[20,40,60,80].filter(t=>profile.max_level_reached>=t && CHALLENGES[t]);
+  if(!ths.length) return '';
+  const cards=ths.map(t=>{
+    const s=special[t];
+    if(!s){
+      return `<div class="panel" style="--pg:var(--violet);padding:12px;margin-bottom:9px">
+        <div class="row"><div style="flex:1"><div class="mono" style="font-size:10px;color:var(--violet)">SOGLIA ${t} · DISPONIBILE</div>
+          <b style="font-family:var(--disp);font-size:15px">Quest speciale da affrontare</b></div>
+          <button class="mono" data-action="choose-special" data-th="${t}" style="padding:9px 13px;font-size:11px;letter-spacing:1px;color:var(--violet);border:1px solid color-mix(in srgb,var(--violet) 45%,transparent);background:color-mix(in srgb,var(--violet) 7%,transparent)">SCEGLI</button></div></div>`;
+    }
+    if(s.status==='completed'){
+      return `<div class="panel" style="--pg:var(--green);padding:12px;margin-bottom:9px;opacity:.9">
+        <div class="mono" style="font-size:10px;color:var(--green)">SOGLIA ${t} · COMPLETATA ✓</div>
+        <b style="font-family:var(--disp);font-size:15px">${esc(s.title)}</b>
+        <div class="mono" style="font-size:10px;color:var(--dim);margin-top:2px">Ricompensa incassata: +${s.xp_reward} XP</div></div>`;
+    }
+    const cur=(metricNow&&metricNow[s.metric]!==undefined)?metricNow[s.metric]:s.baseline;
+    const tot=Math.max(1,s.goal-s.baseline);
+    const prog=Math.max(0,Math.min(tot, cur-s.baseline));
+    const pct=Math.min(100,prog/tot*100);
+    return `<div class="panel" style="--pg:var(--gold);padding:12px;margin-bottom:9px">
+      <div class="mono" style="font-size:10px;color:var(--gold)">SOGLIA ${t} · IN CORSO</div>
+      <b style="font-family:var(--disp);font-size:15px">${esc(s.title)}</b>
+      <div class="mono" style="font-size:10px;color:var(--dim);margin:2px 0 8px;line-height:1.4">${esc(s.description)}</div>
+      <div class="row mono" style="font-size:10px;color:var(--dim);margin-bottom:5px"><span>${prog}/${tot} ${METRIC_LABEL[s.metric]||''}</span><span style="color:var(--gold)">+${s.xp_reward} XP</span></div>
+      <div class="bar"><i style="width:${pct}%;background:linear-gradient(90deg,var(--gold),var(--glow));box-shadow:0 0 12px var(--gold)"></i></div></div>`;
+  }).join('');
+  return `<div class="lbl" style="color:var(--violet);margin-bottom:8px">Quest Speciali</div>${cards}
+    <div style="height:14px"></div>`;
 }
 
 /* ---------- eventi ---------- */
@@ -545,12 +1065,40 @@ document.getElementById('screen').addEventListener('click',e=>{
   else if(a==='day') dayMenu(el.dataset.day);
   else if(a==='mprev'){ calMonth.m--; if(calMonth.m<0){calMonth.m=11;calMonth.y--;} render(); }
   else if(a==='mnext'){ calMonth.m++; if(calMonth.m>11){calMonth.m=0;calMonth.y++;} render(); }
+  else if(a==='addbook') bookForm();
+  else if(a==='finish-book') finishBook(el.dataset.id);
+  else if(a==='del-book') delBook(el.dataset.id);
+  else if(a==='addphoto') pickPhoto(+el.dataset.level);
+  else if(a==='viewphoto') photoModal(+el.dataset.level);
+  else if(a==='gotomanage'){ tab='manage'; render(); }
+  else if(a==='backtome'){ tab='me'; render(); }
+  else if(a==='qnew') openQuestForm(null);
+  else if(a==='qedit') openQuestForm(el.dataset.id);
+  else if(a==='qtoggle') toggleQuestActive(el.dataset.id);
+  else if(a==='qup') moveQuest(el.dataset.id,-1);
+  else if(a==='qdown') moveQuest(el.dataset.id,1);
+  else if(a==='choose-special') specialChoiceModal(+el.dataset.th);
+});
+document.getElementById('photoInput').addEventListener('change',e=>{
+  const f=e.target.files&&e.target.files[0];
+  if(f) uploadPhoto(f, uploadLevel);
+  e.target.value='';
 });
 document.getElementById('special').addEventListener('click',e=>{
   const ov=e.target.closest('[data-action="ovr"]');
   if(ov){ setOverride(ov.dataset.day, ov.dataset.kind); return; }
   const tr=e.target.closest('[data-action="train"]');
   if(tr){ toggleTraining(tr.dataset.day); return; }
+  const sbk=e.target.closest('[data-action="save-book"]');
+  if(sbk){ saveBook(); return; }
+  const rp=e.target.closest('[data-action="repphoto"]');
+  if(rp){ pickPhoto(+rp.dataset.level); return; }
+  const dp=e.target.closest('[data-action="delphoto"]');
+  if(dp){ delPhoto(+dp.dataset.level); return; }
+  const sq=e.target.closest('[data-action="save-quest"]');
+  if(sq){ saveQuestForm(); return; }
+  const ac=e.target.closest('[data-action="accept-ch"]');
+  if(ac){ if(confirm('Scegliere questa sfida? La scelta è definitiva.')) acceptChallenge(+ac.dataset.th, ac.dataset.cid); return; }
   if(e.target.closest('[data-action="close-special"]') || e.target.id==='special'){
     $('#special').style.display='none';
   }
@@ -558,11 +1106,11 @@ document.getElementById('special').addEventListener('click',e=>{
 
 /* ---------- avvio ---------- */
 (function start(){
-  if(SUPABASE_URL.startsWith('INCOLLA') || SUPABASE_ANON_KEY.startsWith('INCOLLA')){
+  if(!SUPABASE_URL || !SUPABASE_ANON_KEY){
     $('#screen').innerHTML=`<div class="panel" style="--pg:var(--gold);margin-top:40px">
       <div class="lbl" style="color:var(--gold)">Configurazione</div>
-      <p style="font-family:var(--disp);font-size:15px;line-height:1.5">Apri <b>index.html</b> e incolla le tue 2 chiavi Supabase
-      dove indicato (in cima allo <span class="mono">&lt;script&gt;</span>), poi ricarica la pagina.</p></div>`;
+      <p style="font-family:var(--disp);font-size:15px;line-height:1.5">Manca il file <b>config.js</b> nella stessa cartella,
+      oppure è vuoto. Deve contenere le tue 2 chiavi Supabase.</p></div>`;
     return;
   }
   sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
