@@ -167,6 +167,7 @@ const CAT={
 
 /* ---------- stato + client ---------- */
 let sb=null, profile=null, quests=[], doneToday=new Set(), tab='home';
+let plans=[], exercises=[], lastWeights={}, planIdx=0, wLoaded=false;
 const localDate = tz => new Intl.DateTimeFormat('en-CA',{timeZone:tz||'Europe/Rome'}).format(new Date());
 const $ = s => document.querySelector(s);
 const esc = s => (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -276,21 +277,63 @@ function viewHome(){
     <div class="stack">${qcards}</div>`;
 }
 
-/* ---- schede (anteprima statica, da collegare dopo) ---- */
+/* ---- SCHEDE ALLENAMENTO (collegate al database) ---- */
+async function loadWorkout(){
+  const [{data:pl},{data:ex}] = await Promise.all([
+    sb.from('workout_plans').select('*').eq('user_id',OWNER_ID).order('sort_order'),
+    sb.from('workout_exercises').select('*').eq('user_id',OWNER_ID).order('sort_order')
+  ]);
+  plans=pl||[]; exercises=ex||[];
+  // ultimo peso registrato per ogni esercizio
+  const {data:logs}=await sb.from('workout_logs').select('exercise_id,weight,log_date')
+    .eq('user_id',OWNER_ID).order('log_date',{ascending:false});
+  lastWeights={};
+  (logs||[]).forEach(l=>{ if(lastWeights[l.exercise_id]===undefined) lastWeights[l.exercise_id]=l.weight; });
+  wLoaded=true; render();
+}
+
+async function saveWeight(exId,btn){
+  const inp=document.querySelector('input[data-ex="'+exId+'"]');
+  const val=parseFloat(inp.value);
+  if(isNaN(val)){ toast('Inserisci un peso',getVar('--red')); return; }
+  const today=localDate(profile.timezone);
+  const {error}=await sb.from('workout_logs')
+    .insert({user_id:OWNER_ID,exercise_id:exId,log_date:today,weight:val});
+  if(error){ toast('Errore salvataggio',getVar('--red')); return; }
+  lastWeights[exId]=val; inp.value='';
+  btn.textContent='✔ OK'; btn.style.color=getVar('--green'); btn.style.borderColor=getVar('--green');
+  toast(val+' kg salvati',getVar('--green'));
+  setTimeout(()=>render(),900);
+}
+
 function viewWorkout(){
-  const ex=[['Panca piana','4×8','62'],['Military press','4×10','34'],['Dip parallele','3×12','—'],['Push-up (quest)','100 reps','—']];
-  const rows=ex.map(([n,s,l])=>`<div class="panel" style="--pg:var(--sys);padding:12px">
-     <div class="row" style="margin-bottom:10px"><div><b style="font-family:var(--disp);font-size:15px">${n}</b>
-     <div class="mono" style="font-size:10px;color:var(--dim)">${s} · ultimo: ${l}kg</div></div></div>
-     <div style="display:flex;gap:8px;align-items:center">
-       <input type="number" placeholder="peso" style="flex:1;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--glow);font-size:14px;padding:8px 10px;outline:none">
-       <span class="mono" style="font-size:12px;color:var(--dim)">kg</span>
-       <button class="mono" style="padding:8px 14px;color:var(--sys);border:1px solid var(--sys);background:transparent;font-size:11px">SALVA</button>
-     </div></div>`).join('');
+  if(!wLoaded){ loadWorkout(); return `<div class="lbl dim">Le mie schede</div><div class="hi mb14">Allenamento</div>
+    <div class="mono" style="color:var(--dim);font-size:12px">caricamento…</div>`; }
+  if(!plans.length) return `<div class="lbl dim">Le mie schede</div><div class="hi mb14">Allenamento</div>
+    <div class="panel" style="--pg:var(--gold)"><div class="mono" style="font-size:12px;line-height:1.6">Nessuna scheda trovata.</div></div>`;
+
+  const plan=plans[Math.min(planIdx,plans.length-1)];
+  const tabs=plans.map((p,i)=>`<button class="mono" data-action="plan" data-i="${i}" style="flex:0 0 auto;font-size:11px;letter-spacing:1px;padding:8px 12px;
+    color:${i===planIdx?'var(--glow)':'var(--dim)'};background:${i===planIdx?'rgba(67,180,255,.1)':'transparent'};
+    border:1px solid ${i===planIdx?'var(--sys)':'var(--line)'}">${esc(p.name.split(' · ')[0].toUpperCase())}</button>`).join('');
+
+  const rows=exercises.filter(e=>e.plan_id===plan.id).map(e=>{
+    const last=lastWeights[e.id];
+    return `<div class="panel" style="--pg:var(--sys);padding:12px">
+      <div style="margin-bottom:10px"><b style="font-family:var(--disp);font-size:15px">${esc(e.name)}</b>
+      <div class="mono" style="font-size:10px;color:var(--dim)">${esc(e.scheme||'')}${last!==undefined&&last!==null?' · ultimo: '+last+'kg':''}</div></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="number" inputmode="decimal" data-ex="${e.id}" placeholder="peso"
+          style="flex:1;min-width:0;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--glow);font-size:14px;padding:8px 10px;outline:none">
+        <span class="mono" style="font-size:12px;color:var(--dim)">kg</span>
+        <button class="mono" data-action="savew" data-id="${e.id}" style="padding:8px 14px;color:var(--sys);border:1px solid var(--sys);background:transparent;font-size:11px">SALVA</button>
+      </div></div>`;
+  }).join('');
+
   return `<div class="lbl dim">Le mie schede</div><div class="hi mb14">Allenamento</div>
-     <div class="lbl" style="color:var(--sys)">Giorno A · Spinta</div>
-     <div class="stack mt8">${rows}</div>
-     <div class="mono" style="font-size:10px;color:var(--dim);margin-top:14px;text-align:center">anteprima · da collegare al database</div>`;
+    <div style="display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;padding-bottom:2px">${tabs}</div>
+    <div class="lbl" style="color:var(--sys)">${esc(plan.name)}</div>
+    <div class="stack mt8">${rows}</div>`;
 }
 function viewCalendar(){
   const days=[['LUN',14,[['Turno 09–17','--dim'],['Meditazione','--green']]],['MAR',15,[['Allenamento A','--sys'],['Duolingo','--violet']]],
@@ -365,6 +408,8 @@ document.getElementById('screen').addEventListener('click',e=>{
   const a=el.dataset.action;
   if(a==='quest') completeQuest(el.dataset.id);
   else if(a==='skip') skipDay();
+  else if(a==='plan'){ planIdx=+el.dataset.i; render(); }
+  else if(a==='savew') saveWeight(el.dataset.id, el);
 });
 document.getElementById('special').addEventListener('click',e=>{
   if(e.target.closest('[data-action="close-special"]') || e.target.id==='special'){
