@@ -113,6 +113,22 @@ input{font-family:var(--mono)}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .chip{font-family:var(--mono);font-size:10px;letter-spacing:.5px;padding:3px 8px}
 
+/* ---- v2.0 effetti "Sistema" ---- */
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:5;
+  background:repeating-linear-gradient(0deg,rgba(111,233,255,.025) 0 1px,transparent 1px 3px)}
+body::before{content:"";position:fixed;left:0;right:0;top:-160px;height:140px;pointer-events:none;z-index:5;
+  background:linear-gradient(180deg,transparent,rgba(111,233,255,.055),transparent);
+  animation:beam 10s linear infinite}
+@keyframes beam{to{transform:translateY(130vh)}}
+.bar{border-radius:0}
+.bar>i::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.4) 50%,transparent 70%);
+  transform:translateX(-100%);animation:sheen 2.8s ease-in-out infinite}
+@keyframes sheen{55%,100%{transform:translateX(100%)}}
+.lvltxt{font-family:var(--disp);font-size:32px;font-weight:800;letter-spacing:9px;color:var(--text);
+  text-shadow:0 0 16px var(--sys);animation:lvpulse 1.1s ease-in-out infinite alternate}
+@keyframes lvpulse{to{text-shadow:0 0 34px var(--glow),0 0 10px var(--glow)}}
+
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -146,7 +162,7 @@ const SUPABASE_URL      = CFG.url || "";
 const SUPABASE_ANON_KEY = CFG.key || "";
 
 const OWNER_ID = "00000000-0000-0000-0000-000000000001"; // il tuo unico profilo
-const APP_VERSION = "1.9";
+const APP_VERSION = "2.0";
 const PHOTO_BUCKET = "progress-photos";
 
 /* ---------- logica livelli (pura) ---------- */
@@ -286,6 +302,7 @@ async function load(){
   await loadSpecial();
   await checkSpecialQuests();
   render();
+  if($('#special').style.display!=='grid') welcomeCheck();   // benvenuto (non copre altri avvisi)
 }
 
 /* ---------- QUEST SPECIALI: caricamento, misurazione, completamento ---------- */
@@ -368,6 +385,7 @@ function specialChoiceModal(threshold){
   const m=$('#special'); m.innerHTML=box; m.style.display='grid';
 }
 function specialCompletedModal(s){
+  sfxCombo();
   const box=`<div class="box" style="border-color:var(--green);box-shadow:0 0 40px -6px var(--green),inset 0 0 40px -20px var(--green)">
     <div style="padding:10px 14px;border-bottom:1px solid color-mix(in srgb,var(--green) 35%,transparent);display:flex;justify-content:space-between;align-items:center">
       <span class="mono" style="font-size:11px;letter-spacing:2px;color:var(--green)">✔ SFIDA COMPLETATA</span>
@@ -538,27 +556,132 @@ async function completeQuest(id){
   if(doneToday.has(id)) return;
   const q=quests.find(x=>x.id===id); if(!q) return;
   const today=localDate(profile.timezone);
-  doneToday.add(id); render();                                  // ottimistico
+  const prevLvl=profile.level;
+  doneToday.add(id); sfxQuest(); render();                      // ottimistico
   const {error}=await sb.from('quest_logs').insert({user_id:OWNER_ID,quest_id:id,log_date:today,xp_awarded:q.xp_value});
   if(error){ doneToday.delete(id); toast('Errore, riprova',getVar('--red')); render(); return; }
   let {updated,res}=await commitXp(q.xp_value,'quest',id,profile); profile=updated;
   toast('+'+q.xp_value+' XP · '+q.category, CAT[q.category].c);
   if(quests.every(x=>doneToday.has(x.id))){
     const combo=await commitXp(COMBO_BONUS,'combo',null,profile); profile=combo.updated;
-    setTimeout(()=>toast('COMBO GIORNALIERA +'+COMBO_BONUS+' XP',getVar('--gold')),750);
+    setTimeout(()=>{ toast('COMBO GIORNALIERA +'+COMBO_BONUS+' XP',getVar('--gold')); sfxCombo(); },750);
     await bumpStreak(profile,today);
     if(combo.res.newMilestone) res={...res,newMilestone:combo.res.newMilestone};
   }
   await checkSpecialQuests();
+  const leveled=profile.level>prevLvl;
   if(res.newMilestone) offerSpecial(res.newMilestone);
+  else if(leveled) levelUpModal(profile.level);
   render();
 }
 async function skipDay(){
+  sfxBad();
   const {updated}=await commitXp(-SKIP_PENALTY,'penalty',null,profile);
   await sb.from('profiles').update({streak_count:0}).eq('id',OWNER_ID);
   profile={...updated,streak_count:0}; toast('PENALITÀ −'+SKIP_PENALTY+' XP',getVar('--red')); render();
 }
 const getVar=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+/* ============================================================
+   AUDIO v2.0 — musica di sottofondo + effetti del Sistema
+   La musica viene letta dal file `musica.mp3` nella stessa
+   cartella dell'app (lo fornisce l'utente). Gli effetti sono
+   generati dal codice (Web Audio), nessun file esterno.
+   iOS blocca l'avvio automatico: serve sempre un tocco.
+   ============================================================ */
+let bgm=null, bgmOk=true, musicPref=false;
+try{ musicPref = localStorage.getItem('rv_music')==='on'; }catch(e){}
+(function initMusic(){
+  try{
+    bgm=new Audio('musica.mp3'); bgm.loop=true; bgm.volume=0.35; bgm.preload='auto';
+    bgm.addEventListener('error',()=>{ bgmOk=false; });
+  }catch(e){ bgmOk=false; }
+})();
+async function toggleMusic(){
+  if(!bgmOk || !bgm){ toast('musica.mp3 non trovato nella cartella',getVar('--gold')); return; }
+  if(bgm.paused){
+    try{
+      await bgm.play(); musicPref=true;
+      try{ localStorage.setItem('rv_music','on'); }catch(e){}
+      toast('MUSICA ATTIVA',getVar('--glow'));
+    }catch(e){ toast('Riprova con un tocco',getVar('--gold')); }
+  }else{
+    bgm.pause(); musicPref=false;
+    try{ localStorage.setItem('rv_music','off'); }catch(e){}
+    toast('MUSICA SPENTA',getVar('--dim'));
+  }
+  render();
+}
+/* se la musica era attiva, riparte al primo tocco (regola iOS) */
+document.addEventListener('pointerdown',()=>{
+  if(musicPref && bgmOk && bgm && bgm.paused) bgm.play().catch(()=>{});
+});
+
+let actx=null;
+function ac(){
+  try{
+    if(!actx) actx=new (window.AudioContext||window.webkitAudioContext)();
+    if(actx.state==='suspended') actx.resume();
+    return actx;
+  }catch(e){ return null; }
+}
+function tone(freq,start,dur,type,vol){
+  const c=ac(); if(!c) return;
+  try{
+    const o=c.createOscillator(), g=c.createGain(), t=c.currentTime+start;
+    o.type=type||'sine'; o.frequency.value=freq;
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.linearRampToValueAtTime(vol||.16,t+.02);
+    g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+    o.connect(g); g.connect(c.destination); o.start(t); o.stop(t+dur+.05);
+  }catch(e){}
+}
+const sfxQuest=()=>{ tone(880,0,.14,'triangle'); tone(1318,.09,.2,'triangle'); };
+const sfxCombo=()=>{ [659,880,1108,1318].forEach((f,i)=>tone(f,i*.09,.24,'triangle')); };
+const sfxLevel=()=>{ tone(220,0,1,'sine',.14); [440,554,659,880,1108,1318].forEach((f,i)=>tone(f,i*.11,.42,'sawtooth',.09)); };
+const sfxBad  =()=>{ tone(220,0,.3,'sawtooth',.11); tone(155,.18,.55,'sawtooth',.11); };
+
+/* ---------- benvenuto del Sistema (una volta al giorno) ---------- */
+const SHIFT_TXT={diurno:'Turno diurno · 8–20',notte:'Turno di notte · 20–8',
+  smontante:'Smontante',riposo:'Riposo',salto:'Salto turno'};
+const WELCOME_MSG={
+  diurno:'Il turno diurno ti attende. Gestisci le energie: le quest non aspettano.',
+  notte:"Stanotte vegli sulla città. L'Ombra si allena anche al buio.",
+  smontante:"Hai smontato: recupera. Anche il riposo fa parte dell'ascesa.",
+  riposo:'Giorno di riposo: il momento perfetto per completare ogni quest.',
+  salto:'Salto turno: la giornata è interamente tua. Usala da Cacciatore.'};
+function welcomeCheck(){
+  const today=localDate(profile.timezone);
+  let seen=null; try{ seen=localStorage.getItem('rv_welcome'); }catch(e){}
+  if(seen===today) return;
+  try{ localStorage.setItem('rv_welcome',today); }catch(e){}
+  const sh=shiftFor(today);
+  const box=`<div class="box"><div style="padding:10px 14px;border-bottom:1px solid color-mix(in srgb,var(--sys) 35%,transparent);display:flex;justify-content:space-between;align-items:center">
+    <span class="mono" style="font-size:11px;letter-spacing:2px;color:var(--sys)">⚠ NOTIFICA DEL SISTEMA</span>
+    <button data-action="welcome-ok" style="background:none;border:none;color:var(--dim);font-size:16px">✕</button></div>
+    <div style="padding:24px 20px;text-align:center">
+      <div style="font-family:var(--disp);font-size:22px;font-weight:800;color:var(--glow);text-shadow:0 0 16px var(--sys);margin-bottom:6px">Bentornato, ${esc(profile.display_name||'Cacciatore')}</div>
+      <div class="mono" style="font-size:11px;color:var(--gold);letter-spacing:1px;margin-bottom:14px">${sh.icon?sh.icon+' ':''}${SHIFT_TXT[sh.kind]||''}${sh.label?' · '+sh.label:''}</div>
+      <div class="mono" style="font-size:12px;color:var(--text);line-height:1.7;margin-bottom:8px">${WELCOME_MSG[sh.kind]||''}</div>
+      <div class="mono" style="font-size:11px;color:var(--dim);margin-bottom:20px">Quest di oggi: ${quests.length} · Streak: 🔥 ${profile.streak_count}</div>
+      <button class="btnfull" data-action="welcome-ok" style="background:linear-gradient(90deg,var(--sys),var(--glow))">ACCETTA</button>
+    </div></div>`;
+  const m=$('#special'); m.innerHTML=box; m.style.display='grid';
+}
+
+/* ---------- popup LEVEL UP ---------- */
+function levelUpModal(lvl){
+  sfxLevel();
+  const box=`<div class="box" style="border-color:var(--glow);box-shadow:0 0 60px -8px var(--glow),inset 0 0 50px -20px var(--sys)">
+    <div style="padding:32px 22px;text-align:center">
+      <div class="mono" style="font-size:11px;letter-spacing:4px;color:var(--sys);margin-bottom:12px">⚠ NOTIFICA DEL SISTEMA</div>
+      <div class="lvltxt">LEVEL UP</div>
+      <div style="font-family:var(--num);font-size:62px;font-weight:800;color:var(--glow);text-shadow:0 0 28px var(--glow);margin:6px 0 2px">${lvl}</div>
+      <div class="mono" style="font-size:11px;color:var(--violet);letter-spacing:2px;margin-bottom:22px">GRADO ${rankForLevel(lvl)} · CACCIATORE</div>
+      <button class="btnfull" data-action="close-special" style="background:linear-gradient(90deg,var(--sys),var(--glow))">CONTINUA L'ASCESA</button>
+    </div></div>`;
+  const m=$('#special'); m.innerHTML=box; m.style.display='grid';
+}
 
 /* ---------- GESTIONE QUEST (aggiungi/modifica/attiva/riordina) ---------- */
 async function loadAllQuests(){
@@ -697,10 +820,24 @@ function viewHome(){
       <div class="xp">+${q.xp_value}</div>
       <div class="ck">${isDone?'✔':''}</div></div>`;
   }).join('');
+  const todayS=localDate(profile.timezone), sh=shiftFor(todayS);
+  const shC=(SHIFT_COLOR[sh.kind]&&SHIFT_COLOR[sh.kind]!=='transparent')?SHIFT_COLOR[sh.kind]:'#8FA3C8';
+  const playing=bgmOk&&bgm&&!bgm.paused;
   return `
     <div class="row mb14">
       <div><div class="lbl dim">System · Risveglio</div><div class="hi">Buongiorno, ${esc(profile.display_name||'Cacciatore')}</div></div>
-      <div class="mono" style="color:var(--gold)">🔥 ${profile.streak_count}</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button data-action="music" title="Musica" style="width:34px;height:34px;padding:0;font-size:15px;line-height:1;
+          color:${playing?'var(--glow)':'var(--dim)'};border:1px solid ${playing?'var(--sys)':'var(--line)'};
+          background:${playing?'rgba(67,180,255,.12)':'transparent'};box-shadow:${playing?'0 0 10px -2px var(--sys)':'none'}">${playing?'🔊':'♪'}</button>
+        <div class="mono" style="color:var(--gold)">🔥 ${profile.streak_count}</div>
+      </div>
+    </div>
+    <div class="panel mb16" style="--pg:${shC};padding:10px 14px">
+      <div class="row mono" style="font-size:11px">
+        <span style="letter-spacing:1px;color:${shC}">${sh.icon?sh.icon+' ':''}OGGI · ${(SHIFT_TXT[sh.kind]||'').toUpperCase()}</span>
+        <span style="color:var(--dim)">${sh.label||''}</span>
+      </div>
     </div>
     <div class="panel mb16" style="--pg:var(--sys)">
       <div class="row">
@@ -1059,6 +1196,7 @@ document.getElementById('screen').addEventListener('click',e=>{
   const el=e.target.closest('[data-action]'); if(!el) return;
   const a=el.dataset.action;
   if(a==='quest') completeQuest(el.dataset.id);
+  else if(a==='music') toggleMusic();
   else if(a==='skip') skipDay();
   else if(a==='plan'){ planIdx=+el.dataset.i; render(); }
   else if(a==='savew') saveWeight(el.dataset.id, el);
@@ -1097,6 +1235,9 @@ document.getElementById('special').addEventListener('click',e=>{
   if(dp){ delPhoto(+dp.dataset.level); return; }
   const sq=e.target.closest('[data-action="save-quest"]');
   if(sq){ saveQuestForm(); return; }
+  const wk=e.target.closest('[data-action="welcome-ok"]');
+  if(wk){ $('#special').style.display='none';
+    if(musicPref&&bgmOk&&bgm&&bgm.paused) bgm.play().catch(()=>{}); return; }
   const ac=e.target.closest('[data-action="accept-ch"]');
   if(ac){ if(confirm('Scegliere questa sfida? La scelta è definitiva.')) acceptChallenge(+ac.dataset.th, ac.dataset.cid); return; }
   if(e.target.closest('[data-action="close-special"]') || e.target.id==='special'){
