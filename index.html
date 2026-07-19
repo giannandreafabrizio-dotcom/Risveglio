@@ -162,7 +162,7 @@ const SUPABASE_URL      = CFG.url || "";
 const SUPABASE_ANON_KEY = CFG.key || "";
 
 const OWNER_ID = "00000000-0000-0000-0000-000000000001"; // il tuo unico profilo
-const APP_VERSION = "2.0";
+const APP_VERSION = "2.1";
 const PHOTO_BUCKET = "progress-photos";
 
 /* ---------- logica livelli (pura) ---------- */
@@ -617,6 +617,14 @@ document.addEventListener('pointerdown',()=>{
   if(musicPref && bgmOk && bgm && bgm.paused) bgm.play().catch(()=>{});
 });
 
+/* apre Spotify sulla colonna sonora; su iPhone salta nell'app, altrimenti nel browser */
+const SPOTIFY_QUERY = 'Solo Leveling';
+function openSpotify(){
+  const q=encodeURIComponent(SPOTIFY_QUERY);
+  window.open('https://open.spotify.com/search/'+q, '_blank');
+  toast('APRO LA COLONNA SONORA','#1DB954');
+}
+
 let actx=null;
 function ac(){
   try{
@@ -827,6 +835,8 @@ function viewHome(){
     <div class="row mb14">
       <div><div class="lbl dim">System · Risveglio</div><div class="hi">Buongiorno, ${esc(profile.display_name||'Cacciatore')}</div></div>
       <div style="display:flex;gap:8px;align-items:center">
+        <button data-action="spotify" title="Colonna sonora" style="width:34px;height:34px;padding:0;font-size:15px;line-height:1;
+          color:#1DB954;border:1px solid rgba(29,185,84,.45);background:rgba(29,185,84,.08)">♫</button>
         <button data-action="music" title="Musica" style="width:34px;height:34px;padding:0;font-size:15px;line-height:1;
           color:${playing?'var(--glow)':'var(--dim)'};border:1px solid ${playing?'var(--sys)':'var(--line)'};
           background:${playing?'rgba(67,180,255,.12)':'transparent'};box-shadow:${playing?'0 0 10px -2px var(--sys)':'none'}">${playing?'🔊':'♪'}</button>
@@ -1197,6 +1207,7 @@ document.getElementById('screen').addEventListener('click',e=>{
   const a=el.dataset.action;
   if(a==='quest') completeQuest(el.dataset.id);
   else if(a==='music') toggleMusic();
+  else if(a==='spotify') openSpotify();
   else if(a==='skip') skipDay();
   else if(a==='plan'){ planIdx=+el.dataset.i; render(); }
   else if(a==='savew') saveWeight(el.dataset.id, el);
