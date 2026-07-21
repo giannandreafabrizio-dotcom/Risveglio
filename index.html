@@ -27,7 +27,7 @@ body{
   background-attachment:fixed;
 }
 #app{max-width:480px;margin:0 auto;min-height:100vh;position:relative;
-  padding:24px 16px calc(84px + env(safe-area-inset-bottom));}
+  padding:calc(24px + env(safe-area-inset-top)) 16px calc(84px + env(safe-area-inset-bottom));}
 #app::before{content:"";position:fixed;inset:0;max-width:480px;margin:0 auto;pointer-events:none;
   background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
   background-size:34px 34px;opacity:.13;}
@@ -162,7 +162,7 @@ const SUPABASE_URL      = CFG.url || "";
 const SUPABASE_ANON_KEY = CFG.key || "";
 
 const OWNER_ID = "00000000-0000-0000-0000-000000000001"; // il tuo unico profilo
-const APP_VERSION = "2.2";
+const APP_VERSION = "2.3";
 const PHOTO_BUCKET = "progress-photos";
 
 /* ---------- logica livelli (pura) ---------- */
