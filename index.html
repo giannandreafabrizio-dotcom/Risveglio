@@ -220,7 +220,7 @@ const SUPABASE_URL      = CFG.url || "";
 const SUPABASE_ANON_KEY = CFG.key || "";
 
 const OWNER_ID = "00000000-0000-0000-0000-000000000001"; // il tuo unico profilo
-const APP_VERSION = "2.4";
+const APP_VERSION = "2.5";
 const PHOTO_BUCKET = "progress-photos";
 
 /* ---------- logica livelli (pura) ---------- */
@@ -242,6 +242,12 @@ function applyXp(s, delta){
   const currM=Math.floor(newMax/MILESTONE)*MILESTONE;
   const newMilestone=(currM>prevM && currM>=MILESTONE)?currM:null;
   return {level:lvl,currentXp:xp,maxLevelReached:newMax,rank:rankForLevel(lvl),newMilestone};
+}
+/* v2.5 — soglia milestone superata confrontando il livello massimo prima/dopo */
+function milestoneCrossed(prevMax,newMax){
+  const p=Math.floor((prevMax||1)/MILESTONE)*MILESTONE;
+  const c=Math.floor((newMax||1)/MILESTONE)*MILESTONE;
+  return (c>p && c>=MILESTONE)?c:null;
 }
 
 /* ---------- categorie ---------- */
@@ -393,6 +399,7 @@ async function load(){
     sb.from('quests').select('*').eq('is_active',true).eq('frequency','daily').order('sort_order')
   ]);
   profile=prof; quests=qs||[];
+  await syncXpFromLedger();          // v2.5: livello e XP sempre ricalcolati dal registro
   const today=localDate(profile?.timezone);
   const {data:logs}=await sb.from('quest_logs').select('quest_id').eq('user_id',OWNER_ID).eq('log_date',today);
   doneToday=new Set((logs||[]).map(l=>l.quest_id));
@@ -724,13 +731,62 @@ function photoModal(level){
   const m=$('#special'); m.innerHTML=box; m.style.display='grid';
 }
 
-/* ---------- scrittura XP: ledger + cache profilo ---------- */
+/* ============================================================
+   v2.5 — IL REGISTRO XP È L'UNICA FONTE DI VERITÀ
+   Prima il totale veniva calcolato sulla copia che il telefono
+   aveva in memoria: se quella copia era vecchia (app ripresa dal
+   background, o aperta su due dispositivi) il salvataggio
+   sovrascriveva il valore buono con uno vecchio e gli XP sparivano
+   pur restando la quest registrata (successo il 5 agosto 2026).
+   Da qui in poi livello, XP, grado e livello massimo si ricalcolano
+   SEMPRE rigiocando tutti gli xp_events dal primo all'ultimo:
+   all'avvio e dopo ogni variazione. Il conto si risistema da solo.
+   ATTENZIONE: per correggere gli XP a mano non si tocca più
+   profiles, si aggiunge una riga in xp_events (reason 'manual').
+   ============================================================ */
+async function stateFromLedger(){
+  const {data,error}=await sb.from('xp_events').select('delta,created_at')
+    .eq('user_id',OWNER_ID).order('created_at',{ascending:true});
+  if(error||!data) return null;                       // rete assente: si tiene il valore salvato
+  let s={level:1,currentXp:0,maxLevelReached:1};
+  for(const e of data){
+    const r=applyXp(s, Number(e.delta)||0);
+    s={level:r.level,currentXp:r.currentXp,maxLevelReached:r.maxLevelReached};
+  }
+  return {level:s.level,current_xp:s.currentXp,max_level_reached:s.maxLevelReached,
+          rank:rankForLevel(s.level)};
+}
+async function syncXpFromLedger(){
+  if(!profile) return null;
+  const led=await stateFromLedger();
+  if(!led) return null;
+  led.max_level_reached=Math.max(led.max_level_reached, profile.max_level_reached||1);
+  const diverso = led.level!==profile.level || led.current_xp!==profile.current_xp
+               || led.max_level_reached!==profile.max_level_reached || led.rank!==profile.rank;
+  if(diverso) await sb.from('profiles').update(led).eq('id',OWNER_ID);
+  profile={...profile,...led};
+  return led;
+}
+
+/* ---------- scrittura XP: registro + copia nel profilo ---------- */
 async function commitXp(delta,reason,refId,base){
-  const res=applyXp({level:base.level,currentXp:base.current_xp,maxLevelReached:base.max_level_reached},delta);
-  const updated={...base,level:res.level,current_xp:res.currentXp,max_level_reached:res.maxLevelReached,rank:res.rank};
   await sb.from('xp_events').insert({user_id:OWNER_ID,delta,reason,ref_id:refId||null});
-  await sb.from('profiles').update({level:updated.level,current_xp:updated.current_xp,
-    max_level_reached:updated.max_level_reached,rank:updated.rank}).eq('id',OWNER_ID);
+  const prevMax=Math.max(base.max_level_reached||1,1);
+  const led=await stateFromLedger();
+  if(!led){                                           // fallback: comportamento pre-2.5
+    const res=applyXp({level:base.level,currentXp:base.current_xp,maxLevelReached:base.max_level_reached},delta);
+    const updated={...base,level:res.level,current_xp:res.currentXp,max_level_reached:res.maxLevelReached,rank:res.rank};
+    await sb.from('profiles').update({level:updated.level,current_xp:updated.current_xp,
+      max_level_reached:updated.max_level_reached,rank:updated.rank}).eq('id',OWNER_ID);
+    return {updated,res};
+  }
+  led.max_level_reached=Math.max(led.max_level_reached,prevMax);
+  await sb.from('profiles').update({level:led.level,current_xp:led.current_xp,
+    max_level_reached:led.max_level_reached,rank:led.rank}).eq('id',OWNER_ID);
+  const updated={...base,level:led.level,current_xp:led.current_xp,
+    max_level_reached:led.max_level_reached,rank:led.rank};
+  const res={level:led.level,currentXp:led.current_xp,maxLevelReached:led.max_level_reached,
+    rank:led.rank,newMilestone:milestoneCrossed(prevMax,led.max_level_reached)};
   return {updated,res};
 }
 async function bumpStreak(base,today){
