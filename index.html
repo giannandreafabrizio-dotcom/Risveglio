@@ -16,10 +16,10 @@
 :root{
   --bg:#05070F; --panel:rgba(14,22,42,.72); --line:rgba(90,150,230,.28);
   --sys:#43B4FF; --glow:#6FE9FF; --violet:#B57BFF; --gold:#FFC663;
-  --green:#4DFFA6; --red:#FF5468; --text:#DCE6FA; --dim:#7C8AAE;
+  --green:#4DFFA6; --red:#FF5468; --text:#DCE6FA; --dim:#93A2C4;
   --disp:'Rajdhani',sans-serif; --mono:'Share Tech Mono',monospace; --num:'Orbitron',sans-serif;
 }
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 html,body{margin:0;height:100%}
 body{
   background:radial-gradient(120% 80% at 50% -10%, #10203f 0%, var(--bg) 60%);
@@ -46,8 +46,12 @@ body{
 .mono{font-family:var(--mono)}
 .dim{color:var(--dim)}
 .row{display:flex;align-items:center;justify-content:space-between}
-button{font-family:inherit;cursor:pointer}
+button{font-family:inherit;cursor:pointer;min-height:44px;
+  -webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 input{font-family:var(--mono)}
+/* v2.8 — iPhone: sotto i 16px iOS ingrandisce da solo la pagina quando tocchi un campo */
+input,select,textarea{font-size:16px!important}
+
 
 /* ---- header ---- */
 .hi{font-family:var(--disp);font-size:22px;font-weight:700;line-height:1;color:var(--text)}
@@ -70,7 +74,7 @@ input{font-family:var(--mono)}
 .q .t{flex:1;min-width:0}
 .q .t b{font-family:var(--disp);font-size:15px;font-weight:600;color:var(--text);display:block}
 .q.done .t b{text-decoration:line-through}
-.q .t span{font-family:var(--mono);font-size:10px;color:var(--dim);display:block;
+.q .t span{font-family:var(--mono);font-size:11px;color:var(--dim);display:block;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .q .xp{font-family:var(--mono);font-size:11px;color:var(--cat);flex:0 0 auto}
 .q .ck{width:26px;height:26px;flex:0 0 auto;display:grid;place-items:center;
@@ -89,7 +93,7 @@ input{font-family:var(--mono)}
 #nav button.on{color:var(--glow)}
 #nav button.on::before{content:"";position:absolute;top:0;width:26px;height:2px;background:var(--glow);box-shadow:0 0 8px var(--glow)}
 #nav .ni{font-size:19px;line-height:1}
-#nav .nt{font-family:var(--mono);font-size:9px;letter-spacing:1px}
+#nav .nt{font-family:var(--mono);font-size:11px;letter-spacing:1px}
 
 /* ---- toast ---- */
 #toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:40;display:none;
@@ -98,11 +102,30 @@ input{font-family:var(--mono)}
 @keyframes pop{from{opacity:0;transform:translate(-50%,-8px)}to{opacity:1;transform:translate(-50%,0)}}
 
 /* ---- special quest modal ---- */
-#special{position:fixed;inset:0;z-index:60;display:none;place-items:center;padding:24px;
+/* v2.8 — iPhone: i pannelli salgono dal basso, dove arriva il pollice */
+#special{position:fixed;inset:0;z-index:60;display:none;place-items:end center;padding:0;
   background:rgba(3,5,12,.86);backdrop-filter:blur(3px)}
-#special .box{width:100%;max-width:400px;background:#0C1428;border:1px solid var(--violet);
-  box-shadow:0 0 40px -6px var(--violet), inset 0 0 40px -20px var(--violet);animation:sq .35s cubic-bezier(.2,.9,.3,1.2)}
-@keyframes sq{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
+#special .box{width:100%;max-width:480px;background:#0C1428;border:1px solid var(--violet);border-bottom:none;
+  box-shadow:0 -12px 44px -8px var(--violet), inset 0 0 40px -20px var(--violet);
+  max-height:92vh;overflow-y:auto;padding-bottom:env(safe-area-inset-bottom);
+  animation:sq .32s cubic-bezier(.2,.9,.3,1.05)}
+#special .box::before{content:"";display:block;width:38px;height:4px;border-radius:2px;
+  background:rgba(220,230,250,.32);margin:9px auto 0}
+@keyframes sq{from{transform:translateY(100%)}to{transform:translateY(0)}}
+
+/* v2.8 — riga che si scorre verso sinistra per eliminare */
+.sw{position:relative;overflow:hidden;touch-action:pan-y}
+.sw>.del{position:absolute;top:0;right:0;bottom:0;width:104px;display:grid;place-items:center;
+  background:linear-gradient(90deg,rgba(255,84,104,.14),rgba(255,84,104,.34));
+  color:var(--red);font-family:var(--mono);font-size:11px;letter-spacing:1px}
+.sw>.front{position:relative;background:#0b1322;transition:transform .22s cubic-bezier(.2,.8,.2,1)}
+.sw.open>.front{transform:translateX(-104px)}
+#undo{position:fixed;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:45;display:none;
+  background:rgba(6,10,22,.97);border:1px solid var(--red);box-shadow:0 0 22px -6px var(--red);
+  padding:13px 16px;align-items:center;justify-content:space-between}
+#undo span{font-family:var(--mono);font-size:12px;color:var(--text)}
+#undo button{background:none;border:none;color:var(--glow);font-family:var(--mono);
+  font-size:12px;letter-spacing:1px;padding:0 4px}
 
 .btnfull{width:100%;padding:13px;font-family:var(--mono);font-size:13px;letter-spacing:2px;
   color:#05070F;font-weight:700;border:none;background:linear-gradient(90deg,var(--violet),var(--glow));
@@ -111,7 +134,7 @@ input{font-family:var(--mono)}
   color:var(--red);border:1px solid rgba(255,84,104,.4);background:rgba(255,84,104,.05)}
 
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.chip{font-family:var(--mono);font-size:10px;letter-spacing:.5px;padding:3px 8px}
+.chip{font-family:var(--mono);font-size:11px;letter-spacing:.5px;padding:3px 8px}
 
 /* ---- v2.0 effetti "Sistema" ---- */
 body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:5;
@@ -150,24 +173,24 @@ body::before{content:"";position:fixed;left:0;right:0;top:-160px;height:140px;po
   animation:bbeam 2.6s linear infinite}
 @keyframes bbeam{to{transform:translateY(140vh)}}
 #boot .top{position:absolute;top:calc(9% + env(safe-area-inset-top));left:0;right:0;text-align:center;z-index:3}
-#boot .top .k{font-family:var(--mono);font-size:10px;letter-spacing:5px;color:var(--sys);opacity:.85}
+#boot .top .k{font-family:var(--mono);font-size:11px;letter-spacing:5px;color:var(--sys);opacity:.85}
 #boot .bt{position:absolute;bottom:calc(13% + env(safe-area-inset-bottom));left:0;right:0;text-align:center;z-index:3;
   font-family:var(--disp);font-size:19px;font-weight:800;letter-spacing:6px;color:var(--glow);
   text-shadow:0 0 18px var(--sys),0 0 40px rgba(67,180,255,.5);
   animation:bpulse 1.5s ease-in-out infinite alternate}
 @keyframes bpulse{from{opacity:.55}to{opacity:1}}
 #boot .skip{position:absolute;bottom:calc(6% + env(safe-area-inset-bottom));left:0;right:0;text-align:center;z-index:3;
-  font-family:var(--mono);font-size:9px;letter-spacing:3px;color:var(--dim)}
+  font-family:var(--mono);font-size:11px;letter-spacing:3px;color:var(--dim)}
 #boot .flash{position:absolute;inset:0;background:#CFF3FF;opacity:0;pointer-events:none;
   animation:bflash 4.2s ease-out both}
 @keyframes bflash{0%{opacity:.85}7%{opacity:0}92%{opacity:0}100%{opacity:0}}
 
 /* ---- v2.4 caratteristiche ---- */
 .st{padding:11px 12px;position:relative}
-.st .n{font-family:var(--mono);font-size:9.5px;letter-spacing:1.5px;color:var(--dim)}
+.st .n{font-family:var(--mono);font-size:11px;letter-spacing:1.5px;color:var(--dim)}
 .st .v{font-family:var(--num);font-size:26px;font-weight:800;line-height:1;margin-top:2px}
 .st .i{position:absolute;top:10px;right:11px;font-size:14px;opacity:.85}
-.st .d{font-family:var(--mono);font-size:8.5px;color:var(--dim);margin-top:5px;line-height:1.3}
+.st .d{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:5px;line-height:1.3}
 .tbar{height:4px;background:rgba(255,255,255,.06);position:relative;overflow:hidden;margin-top:7px}
 .tbar>i{position:absolute;inset:0;transition:width .5s ease}
 .regrow{padding:11px 12px}
@@ -202,6 +225,7 @@ body::before{content:"";position:fixed;left:0;right:0;top:-160px;height:140px;po
 </nav>
 
 <div id="toast"></div>
+<div id="undo"><span></span><button data-undo>ANNULLA</button></div>
 <div id="special"></div>
 <input type="file" id="photoInput" accept="image/*" style="display:none">
 
@@ -220,7 +244,7 @@ const SUPABASE_URL      = CFG.url || "";
 const SUPABASE_ANON_KEY = CFG.key || "";
 
 const OWNER_ID = "00000000-0000-0000-0000-000000000001"; // il tuo unico profilo
-const APP_VERSION = "2.6";
+const APP_VERSION = "2.8";
 const PHOTO_BUCKET = "progress-photos";
 
 /* ---------- logica livelli (pura) ---------- */
@@ -338,7 +362,9 @@ const METRIC_LABEL={quests_total:'quest',perfect_days:'giornate perfette',traini
 
 /* ---------- stato + client ---------- */
 let sb=null, profile=null, quests=[], doneToday=new Set(), tab='home';
-let plans=[], exercises=[], lastWeights={}, planIdx=0, wLoaded=false;
+let plans=[], exercises=[], sessions={}, wLoaded=false;
+let wView='list', curPlan=null, openEx=null, histEx=null, extraSets={}, draft={};
+let editingPlanId=null, editingExId=null;
 let overrides={}, events={}, calMonth=null, cLoaded=false, ferieCount=0;
 let books=[], libLoaded=false;
 let photos={}, uploadLevel=null;
@@ -569,7 +595,7 @@ function specialChoiceModal(threshold){
     <button data-action="accept-ch" data-th="${threshold}" data-cid="${o.id}"
       style="display:block;width:100%;text-align:left;padding:13px;margin-bottom:10px;cursor:pointer;
       border:1px solid color-mix(in srgb,var(${dcol[o.diff]}) 45%,transparent);background:color-mix(in srgb,var(${dcol[o.diff]}) 7%,transparent)">
-      <div class="mono" style="font-size:9px;letter-spacing:1px;color:var(${dcol[o.diff]})">${o.diff.toUpperCase()} · +${o.xp} XP</div>
+      <div class="mono" style="font-size:11px;letter-spacing:1px;color:var(${dcol[o.diff]})">${o.diff.toUpperCase()} · +${o.xp} XP</div>
       <div style="font-family:var(--disp);font-size:17px;font-weight:700;color:var(--glow);margin:4px 0">${esc(o.title)}</div>
       <div class="mono" style="font-size:11px;color:var(--text);line-height:1.5">${esc(o.desc)}</div></button>`).join('');
   const box=`<div class="box"><div style="padding:10px 14px;border-bottom:1px solid color-mix(in srgb,var(--violet) 35%,transparent);display:flex;justify-content:space-between;align-items:center">
@@ -705,7 +731,7 @@ async function uploadPhoto(file, level){
   render();
 }
 async function delPhoto(level){
-  if(!confirm('Vuoi eliminare questa foto milestone?')) return;
+  if(!await askConfirm('Eliminare la foto?','Milestone livello '+level+'. Non si può recuperare.','ELIMINA LA FOTO')) return;
   const p=photos[level];
   if(p) await sb.storage.from(PHOTO_BUCKET).remove([p.path]);
   await sb.from('progress_photos').delete().eq('user_id',OWNER_ID).eq('level',level);
@@ -945,17 +971,17 @@ function openQuestForm(id){
     <span class="mono" style="font-size:11px;letter-spacing:2px;color:var(--violet)">${id?'✎ MODIFICA QUEST':'＋ NUOVA QUEST'}</span>
     <button data-action="close-special" style="background:none;border:none;color:var(--dim);font-size:16px">✕</button></div>
     <div style="padding:18px;max-height:64vh;overflow-y:auto">
-      <div class="mono" style="font-size:10px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">NOME</div>
+      <div class="mono" style="font-size:11px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">NOME</div>
       <input data-q="title" value="${esc(q?.title||'')}" placeholder="Es. Allenamento"
         style="width:100%;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--glow);font-size:14px;padding:10px;outline:none;margin-bottom:14px">
-      <div class="mono" style="font-size:10px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">SOTTOTITOLO</div>
+      <div class="mono" style="font-size:11px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">SOTTOTITOLO</div>
       <input data-q="subtitle" value="${esc(q?.subtitle||'')}" placeholder="Facoltativo"
         style="width:100%;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--glow);font-size:14px;padding:10px;outline:none;margin-bottom:14px">
-      <div class="mono" style="font-size:10px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">CATEGORIA</div>
+      <div class="mono" style="font-size:11px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">CATEGORIA</div>
       <select data-q="category" style="width:100%;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--glow);font-size:14px;padding:10px;outline:none;margin-bottom:14px">
         ${cats.map(c=>`<option value="${c}" ${q?.category===c?'selected':''}>${c.charAt(0).toUpperCase()+c.slice(1)}</option>`).join('')}
       </select>
-      <div class="mono" style="font-size:10px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">XP (10–50)</div>
+      <div class="mono" style="font-size:11px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">XP (10–50)</div>
       <input data-q="xp" type="number" min="10" max="50" value="${q?.xp_value??20}"
         style="width:100%;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--glow);font-size:14px;padding:10px;outline:none;margin-bottom:20px">
       <button class="btnfull" data-action="save-quest">${id?'SALVA MODIFICHE':'AGGIUNGI QUEST'}</button>
@@ -1021,12 +1047,12 @@ function viewManageQuests(){
       <div class="row" style="align-items:flex-start">
         <div style="flex:1;min-width:0">
           <b style="font-family:var(--disp);font-size:15px">${esc(q.title)}</b>
-          <div class="mono" style="font-size:10px;color:var(--dim);margin-top:2px">${esc(q.subtitle||'')}</div>
-          <div class="mono" style="font-size:10px;color:${m.c};margin-top:4px">${q.category} · +${q.xp_value} XP${q.is_active?'':' · DISATTIVA'}</div>
+          <div class="mono" style="font-size:11px;color:var(--dim);margin-top:2px">${esc(q.subtitle||'')}</div>
+          <div class="mono" style="font-size:11px;color:${m.c};margin-top:4px">${q.category} · +${q.xp_value} XP${q.is_active?'':' · DISATTIVA'}</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:4px">
-          <button data-action="qup" data-id="${q.id}" style="background:none;border:1px solid var(--line);color:var(--dim);width:26px;height:26px;font-size:11px" ${i===0?'disabled':''}>▲</button>
-          <button data-action="qdown" data-id="${q.id}" style="background:none;border:1px solid var(--line);color:var(--dim);width:26px;height:26px;font-size:11px" ${i===allQuests.length-1?'disabled':''}>▼</button>
+          <button data-action="qup" data-id="${q.id}" style="background:none;border:1px solid var(--line);color:var(--dim);width:44px;height:44px;font-size:13px" ${i===0?'disabled':''}>▲</button>
+          <button data-action="qdown" data-id="${q.id}" style="background:none;border:1px solid var(--line);color:var(--dim);width:44px;height:44px;font-size:13px" ${i===allQuests.length-1?'disabled':''}>▼</button>
         </div>
       </div>
       <div style="display:flex;gap:8px;margin-top:10px">
@@ -1055,6 +1081,7 @@ function render(){
   else if(tab==='status') s.innerHTML=viewStatus();
   else if(tab==='reg') s.innerHTML=viewRegistro();
   if(tab==='status'||tab==='reg'||tab==='manage') window.scrollTo(0,0);
+  keepAwake(tab==='workout' && wView==='plan');       // v2.8: niente schermo che si spegne in palestra
 }
 
 function viewHome(){
@@ -1100,13 +1127,13 @@ function viewHome(){
         <div style="text-align:right"><div class="lbl" style="color:var(--violet)">Grado</div><div class="rank">${profile.rank}</div></div>
       </div>
       <div class="mt8">
-        <div class="row mono" style="font-size:10px;color:var(--dim);margin-bottom:5px"><span>XP</span><span>${profile.current_xp} / ${need}</span></div>
+        <div class="row mono" style="font-size:11px;color:var(--dim);margin-bottom:5px"><span>XP</span><span>${profile.current_xp} / ${need}</span></div>
         <div class="bar"><i style="width:${pct}%"></i></div>
       </div>
-      <div class="mono" style="font-size:9px;letter-spacing:2px;color:var(--sys);text-align:center;margin-top:9px">◈ TOCCA PER LO STATUS ◈</div>
+      <div class="mono" style="font-size:11px;letter-spacing:2px;color:var(--sys);text-align:center;margin-top:9px">◈ TOCCA PER LO STATUS ◈</div>
     </div>
     <div class="panel mb16" style="--pg:var(--green)">
-      <div class="row mono" style="font-size:10px;margin-bottom:7px">
+      <div class="row mono" style="font-size:11px;margin-bottom:7px">
         <span style="color:var(--green);letter-spacing:1px">💪 ALLENAMENTI · SETTIMANA</span>
         <span style="color:${weekTrained>=WEEKLY_TARGET?'var(--green)':'var(--dim)'}">${Math.min(weekTrained,WEEKLY_TARGET)}/${WEEKLY_TARGET}${weekTrained>=WEEKLY_TARGET?' ✓':''}</span></div>
       <div class="bar"><i style="width:${Math.min(100,weekTrained/WEEKLY_TARGET*100)}%;background:linear-gradient(90deg,var(--green),var(--glow));box-shadow:0 0 12px var(--green)"></i></div>
@@ -1149,33 +1176,33 @@ function viewStatus(){
 
     <div class="panel mb16" style="--pg:var(--sys);text-align:center">
       <div style="font-family:var(--num);font-size:52px;font-weight:800;line-height:.9;color:var(--glow);text-shadow:0 0 26px var(--sys)">${profile.level}</div>
-      <div class="mono" style="font-size:10px;letter-spacing:4px;color:var(--dim);margin-top:2px">LIVELLO</div>
+      <div class="mono" style="font-size:11px;letter-spacing:4px;color:var(--dim);margin-top:2px">LIVELLO</div>
       <div style="display:flex;justify-content:center;gap:22px;margin-top:12px;text-align:left">
-        <div><div class="mono" style="font-size:9px;letter-spacing:1px;color:var(--dim)">CLASSE</div>
+        <div><div class="mono" style="font-size:11px;letter-spacing:1px;color:var(--dim)">CLASSE</div>
           <div style="font-family:var(--disp);font-size:16px;font-weight:700;color:var(--text)">${profile.level>=20?'Cacciatore':'Nessuna'}</div></div>
-        <div><div class="mono" style="font-size:9px;letter-spacing:1px;color:var(--dim)">TITOLO</div>
+        <div><div class="mono" style="font-size:11px;letter-spacing:1px;color:var(--dim)">TITOLO</div>
           <div style="font-family:var(--disp);font-size:16px;font-weight:700;color:var(--violet)">${titleForLevel(profile.max_level_reached)}</div></div>
       </div>
     </div>
 
     <div class="panel mb16" style="--pg:var(--green)">
-      <div class="row mono" style="font-size:9px;color:var(--dim);margin-bottom:4px"><span style="color:var(--green)">✚ HP</span><span>${hp}</span></div>
+      <div class="row mono" style="font-size:11px;color:var(--dim);margin-bottom:4px"><span style="color:var(--green)">✚ HP</span><span>${hp}</span></div>
       <div class="bar mb14" style="height:7px"><i style="width:100%;background:linear-gradient(90deg,var(--green),var(--glow));box-shadow:0 0 10px var(--green)"></i></div>
-      <div class="row mono" style="font-size:9px;color:var(--dim);margin:8px 0 4px"><span style="color:var(--sys)">✦ MP</span><span>${mp}</span></div>
+      <div class="row mono" style="font-size:11px;color:var(--dim);margin:8px 0 4px"><span style="color:var(--sys)">✦ MP</span><span>${mp}</span></div>
       <div class="bar" style="height:7px"><i style="width:100%"></i></div>
-      <div class="row mono" style="font-size:10px;margin-top:11px">
+      <div class="row mono" style="font-size:11px;margin-top:11px">
         <span style="color:var(--dim);letter-spacing:1px">◎ FATICA</span>
         <span style="color:${fat===0?'var(--green)':fat>60?'var(--red)':'var(--gold)'}">${fat}${fat===0?' · riposato':''}</span></div>
     </div>
 
     <div class="row" style="margin-bottom:8px">
       <div class="lbl">Caratteristiche</div>
-      <span class="mono" style="font-size:10px;color:var(--dim)">totale ${tot}</span></div>
+      <span class="mono" style="font-size:11px;color:var(--dim)">totale ${tot}</span></div>
     <div class="grid2 mb16">${cards}</div>
 
     <button class="mono" data-action="goreg" style="width:100%;padding:13px;font-size:12px;letter-spacing:2px;
       color:var(--glow);border:1px solid var(--sys);background:rgba(67,180,255,.08);box-shadow:0 0 18px -6px var(--sys)">✎ REGISTRA LA GIORNATA</button>
-    <div class="mono" style="font-size:9px;color:var(--dim);text-align:center;margin-top:10px;line-height:1.6">
+    <div class="mono" style="font-size:11px;color:var(--dim);text-align:center;margin-top:10px;line-height:1.6">
       Ogni caratteristica parte da ${STAT_BASE} e sale di 1 ogni ${STAT_STEP} punti.<br>
       Forza e parte di Intelligenza salgono da sole (allenamenti registrati e libri finiti).</div>`;
 }
@@ -1197,12 +1224,12 @@ function viewRegistro(){
     if(!acts.length) return '';
     const rows=acts.map(a=>{
       const val=regToday[a.key]!==undefined?regToday[a.key]:'';
-      const gripLine = a.grip ? `<div class="mono" style="font-size:9.5px;color:var(--gold);margin-top:3px">🔄 oggi: ${esc(grip)}</div>` : '';
+      const gripLine = a.grip ? `<div class="mono" style="font-size:11px;color:var(--gold);margin-top:3px">🔄 oggi: ${esc(grip)}</div>` : '';
       return `<div class="panel regrow" style="--pg:${s.col};margin-bottom:9px">
         <div class="row" style="align-items:flex-start;margin-bottom:9px">
           <div style="flex:1;min-width:0">
             <b style="font-family:var(--disp);font-size:15px">${esc(a.label)}</b>
-            <div class="mono" style="font-size:9.5px;color:var(--dim);margin-top:2px">${esc(a.unit)} · ${s.name}</div>
+            <div class="mono" style="font-size:11px;color:var(--dim);margin-top:2px">${esc(a.unit)} · ${s.name}</div>
             ${gripLine}
           </div></div>
         <div style="display:flex;gap:7px;align-items:center">
@@ -1219,75 +1246,339 @@ function viewRegistro(){
       <div><div class="lbl dim">Diario del Sistema</div><div class="hi">Registro di oggi</div></div>
       <button class="mono" data-action="gostatus" style="padding:8px 12px;color:var(--sys);border:1px solid var(--line);background:transparent;font-size:11px">‹ Status</button></div>
     <div class="panel mb16" style="--pg:var(--gold);padding:10px 13px">
-      <div class="mono" style="font-size:10.5px;color:var(--gold);letter-spacing:1px">${today.split('-').reverse().join('/')}</div>
-      <div class="mono" style="font-size:10px;color:var(--dim);line-height:1.6;margin-top:4px">
+      <div class="mono" style="font-size:11px;color:var(--gold);letter-spacing:1px">${today.split('-').reverse().join('/')}</div>
+      <div class="mono" style="font-size:11px;color:var(--dim);line-height:1.6;margin-top:4px">
         Scrivi il totale della giornata: il valore sostituisce quello già salvato per oggi.</div></div>
     ${groups}
     <button class="btnfull" data-action="savereg" style="margin-top:18px;background:linear-gradient(90deg,var(--sys),var(--glow))">SALVA LA GIORNATA</button>
-    <div class="mono" style="font-size:9px;color:var(--dim);text-align:center;margin-top:12px;line-height:1.6">
+    <div class="mono" style="font-size:11px;color:var(--dim);text-align:center;margin-top:12px;line-height:1.6">
       Le trazioni ruotano da sole: pull-up → chin-up → presa neutra.<br>
       Gli allenamenti in palestra e i libri finiti si contano già da Schede, Calendario e Libreria.</div>`;
 }
 
-/* ---- SCHEDE ALLENAMENTO (collegate al database) ---- */
+/* ============================================================
+   SCHEDE ALLENAMENTO (riscritte in v2.7)
+   - le schede e gli esercizi si creano e si modificano dall'app
+   - i carichi si registrano SERIE PER SERIE (un peso per ogni serie)
+   - le ripetizioni sono l'obiettivo scritto nella scheda, non si registrano
+   - un esercizio aperto alla volta: gli altri restano righe chiuse
+   Tabelle: workout_plans, workout_exercises, workout_logs
+   Colonne aggiunte in v2.7: workout_logs.set_no, workout_exercises.sets_n / reps_txt
+   ============================================================ */
+const fmtKg = v => String(Math.round(Number(v)*100)/100).replace('.',',');
+const dmy   = d => { const p=String(d).split('-'); return (+p[2])+' '+(MESI_ABBR[(+p[1])-1]||'').toLowerCase(); };
+
 async function loadWorkout(){
-  const [{data:pl},{data:ex}] = await Promise.all([
+  const [{data:pl},{data:ex},{data:lg}] = await Promise.all([
     sb.from('workout_plans').select('*').eq('user_id',OWNER_ID).order('sort_order'),
-    sb.from('workout_exercises').select('*').eq('user_id',OWNER_ID).order('sort_order')
+    sb.from('workout_exercises').select('*').eq('user_id',OWNER_ID).order('sort_order'),
+    sb.from('workout_logs').select('exercise_id,log_date,set_no,weight').eq('user_id',OWNER_ID)
   ]);
   plans=pl||[]; exercises=ex||[];
-  // ultimo peso registrato per ogni esercizio
-  const {data:logs}=await sb.from('workout_logs').select('exercise_id,weight,log_date')
-    .eq('user_id',OWNER_ID).order('log_date',{ascending:false});
-  lastWeights={};
-  (logs||[]).forEach(l=>{ if(lastWeights[l.exercise_id]===undefined) lastWeights[l.exercise_id]=l.weight; });
+  sessions={};
+  (lg||[]).forEach(l=>{
+    const byDate=(sessions[l.exercise_id]=sessions[l.exercise_id]||{});
+    (byDate[l.log_date]=byDate[l.log_date]||[]).push({n:Number(l.set_no)||1,w:Number(l.weight)||0});
+  });
+  Object.keys(sessions).forEach(id=>{
+    const byDate=sessions[id];
+    sessions[id]=Object.keys(byDate).sort().reverse()
+      .map(d=>({date:d,sets:byDate[d].sort((a,b)=>a.n-b.n)}));
+  });
   wLoaded=true; render();
 }
+const exSessions = id => sessions[id]||[];
+const exToday    = (id,today) => exSessions(id).find(s=>s.date===today)||null;
+const exPrevious = (id,today) => exSessions(id).find(s=>s.date!==today)||null;
+const setsList   = s => s ? s.sets.map(x=>fmtKg(x.w)).join(' · ') : '';
+const exVolume   = s => s ? s.sets.reduce((a,x)=>a+x.w,0) : 0;
+const exBest     = id => exSessions(id).reduce((m,s)=>s.sets.reduce((mm,x)=>Math.max(mm,x.w),m),0);
+const setRows    = e => Math.max(1,(Number(e.sets_n)||3)+(extraSets[e.id]||0));
+const repsOf     = e => e.reps_txt || e.scheme || '';
 
-async function saveWeight(exId,btn){
-  const inp=document.querySelector('input[data-ex="'+exId+'"]');
-  const val=parseFloat(inp.value);
-  if(isNaN(val)){ toast('Inserisci un peso',getVar('--red')); return; }
+/* ---------- salvataggio dei carichi di oggi ---------- */
+async function saveExerciseLogs(exId){
+  const e=exercises.find(x=>x.id===exId); if(!e) return;
   const today=localDate(profile.timezone);
-  const {error}=await sb.from('workout_logs')
-    .insert({user_id:OWNER_ID,exercise_id:exId,log_date:today,weight:val});
+  const n=setRows(e), rows=[];
+  for(let i=1;i<=n;i++){
+    const el=document.querySelector('input[data-set="'+exId+'|'+i+'"]');
+    if(!el) continue;
+    const v=parseFloat(String(el.value).replace(',','.'));
+    if(isNaN(v)||v<=0) continue;
+    rows.push({user_id:OWNER_ID,exercise_id:exId,log_date:today,set_no:i,weight:v});
+  }
+  if(!rows.length){ toast('Scrivi almeno un peso',getVar('--red')); return; }
+  await sb.from('workout_logs').delete().eq('user_id',OWNER_ID).eq('exercise_id',exId).eq('log_date',today);
+  const {error}=await sb.from('workout_logs').insert(rows);
   if(error){ toast('Errore salvataggio',getVar('--red')); return; }
-  lastWeights[exId]=val; inp.value='';
-  btn.textContent='✔ OK'; btn.style.color=getVar('--green'); btn.style.borderColor=getVar('--green');
+  Object.keys(draft).forEach(k=>{ if(k.indexOf(exId+'|')===0) delete draft[k]; });
+  extraSets[exId]=0; openEx=null;
+  await loadWorkout();
   await refreshWeekly();
-  if(!weeklyBonusJustGiven) toast(val+' kg salvati',getVar('--green'));
-  setTimeout(()=>render(),900);
+  sfxQuest();
+  if(!weeklyBonusJustGiven) toast('ESERCIZIO SALVATO',getVar('--green'));
+  render();
 }
 
+/* ---------- schede: creazione, rinomina, eliminazione ---------- */
+function planForm(id){
+  editingPlanId=id||null;
+  const p=id?plans.find(x=>x.id===id):null;
+  const box='<div class="box"><div style="padding:10px 14px;border-bottom:1px solid color-mix(in srgb,var(--violet) 35%,transparent);display:flex;justify-content:space-between;align-items:center">'
+    +'<span class="mono" style="font-size:11px;letter-spacing:2px;color:var(--violet)">'+(id?'✎ RINOMINA SCHEDA':'＋ NUOVA SCHEDA')+'</span>'
+    +'<button data-action="close-special" style="background:none;border:none;color:var(--dim);font-size:16px">✕</button></div>'
+    +'<div style="padding:18px">'
+    +'<div class="mono" style="font-size:11px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">NOME DELLA SCHEDA</div>'
+    +'<input data-pl="name" value="'+esc(p?p.name:'')+'" placeholder="Es. Torso · Spinta" '
+    +'style="width:100%;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--glow);font-size:14px;padding:10px;outline:none;margin-bottom:20px">'
+    +'<button class="btnfull" data-action="save-plan">'+(id?'SALVA':'CREA LA SCHEDA')+'</button></div></div>';
+  const m=$('#special'); m.innerHTML=box; m.style.display='grid';
+  setTimeout(()=>{ const i=$('#special input[data-pl="name"]'); if(i) i.focus(); },60);
+}
+async function savePlanForm(){
+  const el=$('#special input[data-pl="name"]');
+  const name=(el?el.value:'').trim();
+  if(!name){ toast('Scrivi il nome della scheda',getVar('--red')); return; }
+  if(editingPlanId){
+    const {error}=await sb.from('workout_plans').update({name}).eq('id',editingPlanId);
+    if(error){ toast('Errore salvataggio',getVar('--red')); return; }
+    toast('Scheda rinominata',getVar('--green'));
+  }else{
+    const maxOrder=plans.reduce((m,p)=>Math.max(m,p.sort_order||0),0);
+    const {data,error}=await sb.from('workout_plans')
+      .insert({user_id:OWNER_ID,name,sort_order:maxOrder+1}).select();
+    if(error){ toast('Errore salvataggio',getVar('--red')); return; }
+    if(data&&data[0]){ curPlan=data[0].id; wView='edit'; }
+    toast('Scheda creata',getVar('--green'));
+  }
+  $('#special').style.display='none';
+  await loadWorkout();
+}
+async function delPlan(){
+  const p=plans.find(x=>x.id===curPlan); if(!p) return;
+  wView='list'; openEx=null;
+  swipeDelete('plan',p.id);
+}
+
+/* ---------- esercizi: creazione, modifica, ordine, eliminazione ---------- */
+function exForm(id){
+  editingExId=id||null;
+  const e=id?exercises.find(x=>x.id===id):null;
+  const box='<div class="box"><div style="padding:10px 14px;border-bottom:1px solid color-mix(in srgb,var(--violet) 35%,transparent);display:flex;justify-content:space-between;align-items:center">'
+    +'<span class="mono" style="font-size:11px;letter-spacing:2px;color:var(--violet)">'+(id?'✎ MODIFICA ESERCIZIO':'＋ NUOVO ESERCIZIO')+'</span>'
+    +'<button data-action="close-special" style="background:none;border:none;color:var(--dim);font-size:16px">✕</button></div>'
+    +'<div style="padding:18px">'
+    +'<div class="mono" style="font-size:11px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">NOME</div>'
+    +'<input data-ex="name" value="'+esc(e?e.name:'')+'" placeholder="Es. Panca piana" '
+    +'style="width:100%;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--glow);font-size:14px;padding:10px;outline:none;margin-bottom:14px">'
+    +'<div style="display:flex;gap:10px;margin-bottom:20px">'
+    +'<div style="flex:1"><div class="mono" style="font-size:11px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">SERIE</div>'
+    +'<input data-ex="sets" type="number" min="1" max="12" value="'+(e?(e.sets_n||3):3)+'" '
+    +'style="width:100%;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--glow);font-size:14px;padding:10px;outline:none;text-align:center"></div>'
+    +'<div style="flex:1"><div class="mono" style="font-size:11px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">RIPETIZIONI</div>'
+    +'<input data-ex="reps" value="'+esc(e?repsOf(e):'')+'" placeholder="8-10" '
+    +'style="width:100%;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--glow);font-size:14px;padding:10px;outline:none;text-align:center"></div></div>'
+    +'<button class="btnfull" data-action="save-ex">'+(id?'SALVA MODIFICHE':'AGGIUNGI ALLA SCHEDA')+'</button></div></div>';
+  const m=$('#special'); m.innerHTML=box; m.style.display='grid';
+  setTimeout(()=>{ const i=$('#special input[data-ex="name"]'); if(i) i.focus(); },60);
+}
+async function saveExForm(){
+  const ni=$('#special input[data-ex="name"]'), si=$('#special input[data-ex="sets"]'), ri=$('#special input[data-ex="reps"]');
+  const name=(ni?ni.value:'').trim(), reps=(ri?ri.value:'').trim();
+  let sets=parseInt(si?si.value:'3',10);
+  if(!name){ toast('Scrivi il nome dell\'esercizio',getVar('--red')); return; }
+  if(isNaN(sets)) sets=3;
+  sets=Math.max(1,Math.min(12,sets));
+  const scheme=sets+' × '+(reps||'—');
+  if(editingExId){
+    const {error}=await sb.from('workout_exercises')
+      .update({name,sets_n:sets,reps_txt:reps||null,scheme}).eq('id',editingExId);
+    if(error){ toast('Errore salvataggio',getVar('--red')); return; }
+    toast('Esercizio aggiornato',getVar('--green'));
+  }else{
+    const inPlan=exercises.filter(x=>x.plan_id===curPlan);
+    const maxOrder=inPlan.reduce((m,x)=>Math.max(m,x.sort_order||0),0);
+    const {error}=await sb.from('workout_exercises').insert({user_id:OWNER_ID,plan_id:curPlan,
+      name,sets_n:sets,reps_txt:reps||null,scheme,sort_order:maxOrder+1});
+    if(error){ toast('Errore salvataggio',getVar('--red')); return; }
+    toast('Esercizio aggiunto',getVar('--green'));
+  }
+  $('#special').style.display='none';
+  await loadWorkout();
+}
+async function delExercise(id){ swipeDelete('ex',id); }
+async function moveExercise(id,dir){
+  const list=exercises.filter(e=>e.plan_id===curPlan);
+  const idx=list.findIndex(e=>e.id===id); if(idx<0) return;
+  const swap=idx+dir; if(swap<0||swap>=list.length) return;
+  const a=list[idx], b=list[swap];
+  const ao=a.sort_order??idx, bo=b.sort_order??swap;
+  await Promise.all([
+    sb.from('workout_exercises').update({sort_order:bo}).eq('id',a.id),
+    sb.from('workout_exercises').update({sort_order:ao}).eq('id',b.id)
+  ]);
+  await loadWorkout();
+}
+
+/* ---------- viste ---------- */
 function viewWorkout(){
-  if(!wLoaded){ loadWorkout(); return `<div class="lbl dim">Le mie schede</div><div class="hi mb14">Allenamento</div>
-    <div class="mono" style="color:var(--dim);font-size:12px">caricamento…</div>`; }
-  if(!plans.length) return `<div class="lbl dim">Le mie schede</div><div class="hi mb14">Allenamento</div>
-    <div class="panel" style="--pg:var(--gold)"><div class="mono" style="font-size:12px;line-height:1.6">Nessuna scheda trovata.</div></div>`;
-
-  const plan=plans[Math.min(planIdx,plans.length-1)];
-  const tabs=plans.map((p,i)=>`<button class="mono" data-action="plan" data-i="${i}" style="flex:0 0 auto;font-size:11px;letter-spacing:1px;padding:8px 12px;
-    color:${i===planIdx?'var(--glow)':'var(--dim)'};background:${i===planIdx?'rgba(67,180,255,.1)':'transparent'};
-    border:1px solid ${i===planIdx?'var(--sys)':'var(--line)'}">${esc(p.name.split(' · ')[0].toUpperCase())}</button>`).join('');
-
-  const rows=exercises.filter(e=>e.plan_id===plan.id).map(e=>{
-    const last=lastWeights[e.id];
-    return `<div class="panel" style="--pg:var(--sys);padding:12px">
-      <div style="margin-bottom:10px"><b style="font-family:var(--disp);font-size:15px">${esc(e.name)}</b>
-      <div class="mono" style="font-size:10px;color:var(--dim)">${esc(e.scheme||'')}${last!==undefined&&last!==null?' · ultimo: '+last+'kg':''}</div></div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <input type="number" inputmode="decimal" data-ex="${e.id}" placeholder="peso"
-          style="flex:1;min-width:0;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--glow);font-size:14px;padding:8px 10px;outline:none">
-        <span class="mono" style="font-size:12px;color:var(--dim)">kg</span>
-        <button class="mono" data-action="savew" data-id="${e.id}" style="padding:8px 14px;color:var(--sys);border:1px solid var(--sys);background:transparent;font-size:11px">SALVA</button>
-      </div></div>`;
-  }).join('');
-
-  return `<div class="lbl dim">Le mie schede</div><div class="hi mb14">Allenamento</div>
-    <div style="display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;padding-bottom:2px">${tabs}</div>
-    <div class="lbl" style="color:var(--sys)">${esc(plan.name)}</div>
-    <div class="stack mt8">${rows}</div>`;
+  if(!wLoaded){ loadWorkout(); return '<div class="lbl dim">Le mie schede</div><div class="hi mb14">Allenamento</div>'
+    +'<div class="mono" style="font-size:12px;color:var(--dim)">caricamento…</div>'; }
+  if(wView==='hist') return viewExHistory();
+  if(wView==='edit') return viewPlanEdit();
+  if(wView==='plan') return viewPlanUse();
+  return viewPlanList();
 }
+
+function viewPlanList(){
+  const newBtn='<button class="mono" data-action="wnewplan" style="width:100%;padding:12px;font-size:12px;letter-spacing:2px;'
+    +'color:var(--sys);border:1px dashed var(--sys);background:rgba(67,180,255,.05)">＋ NUOVA SCHEDA</button>';
+  if(!plans.length){
+    return '<div class="lbl dim">Le mie schede</div><div class="hi mb16">Allenamento</div>'
+      +'<div style="border:1px dashed rgba(124,138,174,.4);padding:26px 16px;text-align:center;margin-bottom:16px">'
+      +'<div style="font-size:30px;color:var(--dim);line-height:1">🏋</div>'
+      +'<div class="mono" style="font-size:11.5px;color:var(--dim);line-height:1.7;margin-top:10px">'
+      +'Nessuna scheda.<br>Creane una per iniziare<br>a registrare i carichi.</div></div>'+newBtn;
+  }
+  const cols=['var(--sys)','var(--violet)','var(--gold)','var(--green)'];
+  const cards=plans.filter(p=>!isPending('plan',p.id)).map((p,i)=>{
+    const exs=exercises.filter(e=>e.plan_id===p.id);
+    let last=null;
+    exs.forEach(e=>{ const s=exSessions(e.id)[0]; if(s&&(!last||s.date>last)) last=s.date; });
+    const c=cols[i%cols.length];
+    return swipeRow('plan',p.id,
+       '<div class="panel" style="--pg:'+c+';cursor:pointer" data-action="wopen" data-id="'+p.id+'">'
+      +'<div class="row"><div style="flex:1;min-width:0">'
+      +'<b style="font-family:var(--disp);font-size:16px;font-weight:700">'+esc(p.name)+'</b>'
+      +'<div class="mono" style="font-size:11px;color:var(--dim);margin-top:3px">'+exs.length+' esercizi · '
+      +(last?'ultimo uso: '+dmy(last):'mai usata')+'</div></div>'
+      +'<span style="color:'+c+';font-size:18px">›</span></div></div>');
+  }).join('');
+  return '<div class="row mb14"><div><div class="lbl dim">Le mie schede</div><div class="hi">Allenamento</div></div>'
+    +'<div style="text-align:right"><div style="font-family:var(--num);font-size:20px;color:var(--glow)">'+plans.length+'</div>'
+    +'<div class="mono" style="font-size:11px;color:var(--dim);letter-spacing:1px">SCHEDE</div></div></div>'
+    +'<div class="stack mb16">'+cards+'</div>'+newBtn;
+}
+
+function viewPlanUse(){
+  const p=plans.find(x=>x.id===curPlan);
+  if(!p){ wView='list'; return viewPlanList(); }
+  const today=localDate(profile.timezone);
+  const exs=exercises.filter(e=>e.plan_id===p.id && !isPending('ex',e.id));
+  const cards=exs.map(e=>{
+    const tod=exToday(e.id,today), prev=exPrevious(e.id,today), done=!!tod;
+    if(openEx!==e.id){
+      const info = done ? '<span style="color:var(--green)">✔ oggi : '+setsList(tod)+' kg</span>'
+        : (prev ? e.sets_n+' × '+esc(repsOf(e))+' · prima: '+setsList(prev)
+                : e.sets_n+' × '+esc(repsOf(e))+' · mai fatto');
+      return '<div class="panel" style="--pg:'+(done?'var(--green)':'var(--sys)')+';cursor:pointer" data-action="wex" data-id="'+e.id+'">'
+        +'<div class="row"><div style="flex:1;min-width:0">'
+        +'<b style="font-family:var(--disp);font-size:15px">'+esc(e.name)+'</b>'
+        +'<div class="mono" style="font-size:11px;color:var(--dim);margin-top:3px">'+info+'</div></div>'
+        +'<span style="color:'+(done?'var(--green)':'var(--sys)')+';font-size:16px">'+(done?'✔':'▾')+'</span></div></div>';
+    }
+    const n=setRows(e);
+    let rows='';
+    for(let i=1;i<=n;i++){
+      const key=e.id+'|'+i;
+      const cur = tod  ? (tod.sets.find(s=>s.n===i)||{}).w  : undefined;
+      const pw  = prev ? (prev.sets.find(s=>s.n===i)||{}).w : undefined;
+      let val = draft[key]!==undefined ? draft[key]
+              : (cur!==undefined ? String(cur) : (pw!==undefined ? String(pw) : ''));
+      rows+='<div style="display:grid;grid-template-columns:34px 1fr 62px;gap:8px;align-items:center;margin-bottom:7px">'
+        +'<div class="mono" style="font-size:11px;color:var(--dim);text-align:center">'+i+'</div>'
+        +'<input type="number" inputmode="decimal" step="0.5" data-set="'+key+'" value="'+val+'" placeholder="—" '
+        +'style="width:100%;text-align:center;background:rgba(255,255,255,.05);border:1px solid var(--line);'
+        +'color:var(--glow);font-family:var(--mono);font-size:16px;padding:8px 4px;outline:none">'
+        +'<div class="mono" style="font-size:11px;color:var(--dim);text-align:right">'
+        +(pw!==undefined?fmtKg(pw)+' kg':'—')+'</div></div>';
+    }
+    return '<div class="panel" style="--pg:var(--sys)">'
+      +'<div class="row" style="margin-bottom:3px">'
+      +'<b style="font-family:var(--disp);font-size:16px;cursor:pointer" data-action="whist" data-id="'+e.id+'">'
+      +esc(e.name)+' <span class="mono" style="font-size:11px;color:var(--sys)">◷</span></b>'
+      +'<span class="mono" style="font-size:11px;color:var(--dim)">'+e.sets_n+' × '+esc(repsOf(e))+'</span></div>'
+      +'<div class="mono" style="font-size:11px;color:var(--dim);margin-bottom:11px">'
+      +(prev?'ultima volta · '+dmy(prev.date)+' : '+setsList(prev)+' kg':'primo allenamento su questo esercizio')+'</div>'
+      +'<div style="display:grid;grid-template-columns:34px 1fr 62px;gap:8px;margin-bottom:6px">'
+      +'<span class="mono" style="font-size:11px;letter-spacing:1px;color:var(--dim);text-align:center">SERIE</span>'
+      +'<span class="mono" style="font-size:11px;letter-spacing:1px;color:var(--dim);text-align:center">KG</span>'
+      +'<span class="mono" style="font-size:11px;letter-spacing:1px;color:var(--dim);text-align:right">PRIMA</span></div>'
+      +rows
+      +'<button class="mono" data-action="waddset" data-id="'+e.id+'" style="width:100%;padding:9px;margin:4px 0 10px;'
+      +'font-size:11px;letter-spacing:2px;color:var(--sys);border:1px dashed var(--sys);background:rgba(67,180,255,.05)">＋ AGGIUNGI UNA SERIE</button>'
+      +'<button class="btnfull" data-action="wsave" data-id="'+e.id+'" '
+      +'style="background:linear-gradient(90deg,var(--sys),var(--glow))">SALVA L\'ESERCIZIO</button></div>';
+  }).join('');
+  const empty = exs.length ? '' :
+    '<div style="border:1px dashed rgba(124,138,174,.4);padding:22px;text-align:center">'
+    +'<div class="mono" style="font-size:11px;color:var(--dim);line-height:1.7">Scheda vuota.<br>'
+    +'Tocca "Modifica questa scheda" per aggiungere gli esercizi.</div></div>';
+  return '<div class="row mb14"><div><div class="lbl dim">Scheda</div><div class="hi">'+esc(p.name)+'</div></div>'
+    +'<button class="mono" data-action="wback" style="padding:8px 12px;color:var(--sys);border:1px solid var(--line);background:transparent;font-size:11px">‹ Schede</button></div>'
+    +'<div class="stack mb16">'+cards+empty+'</div>'
+    +'<button class="mono" data-action="wedit" style="width:100%;padding:11px;font-size:11px;letter-spacing:1px;'
+    +'color:var(--violet);border:1px solid color-mix(in srgb,var(--violet) 45%,transparent);'
+    +'background:color-mix(in srgb,var(--violet) 6%,transparent)">✎ MODIFICA QUESTA SCHEDA</button>';
+}
+
+function viewPlanEdit(){
+  const p=plans.find(x=>x.id===curPlan);
+  if(!p){ wView='list'; return viewPlanList(); }
+  const exs=exercises.filter(e=>e.plan_id===p.id && !isPending('ex',e.id));
+  const rows=exs.map((e,i)=> swipeRow('ex',e.id,
+    '<div class="panel" style="--pg:var(--sys)"><div class="row" style="align-items:flex-start">'
+    +'<div style="flex:1;min-width:0"><b style="font-family:var(--disp);font-size:15px">'+esc(e.name)+'</b>'
+    +'<div class="mono" style="font-size:11px;color:var(--dim);margin-top:2px">'+e.sets_n+' × '+esc(repsOf(e))+'</div></div>'
+    +'<div style="display:flex;flex-direction:column;gap:4px">'
+    +'<button data-action="wup" data-id="'+e.id+'" style="background:none;border:1px solid var(--line);color:var(--dim);width:44px;height:44px;font-size:13px"'+(i===0?' disabled':'')+'>▲</button>'
+    +'<button data-action="wdown" data-id="'+e.id+'" style="background:none;border:1px solid var(--line);color:var(--dim);width:44px;height:44px;font-size:13px"'+(i===exs.length-1?' disabled':'')+'>▼</button>'
+    +'</div></div>'
+    +'<button class="mono" data-action="wexedit" data-id="'+e.id+'" style="width:100%;margin-top:10px;padding:10px;font-size:11px;letter-spacing:1px;'
+    +'color:var(--sys);border:1px solid color-mix(in srgb,var(--sys) 45%,transparent);background:color-mix(in srgb,var(--sys) 7%,transparent)">✎ MODIFICA</button>'
+    +'</div>')).join('');
+  return '<div class="row mb14"><div><div class="lbl dim">Modifica</div><div class="hi">'+esc(p.name)+'</div></div>'
+    +'<button class="mono" data-action="wdone" style="padding:8px 12px;color:var(--sys);border:1px solid var(--line);background:transparent;font-size:11px">‹ Fine</button></div>'
+    +'<button class="mono" data-action="wnewex" style="width:100%;padding:12px;margin-bottom:14px;font-size:12px;letter-spacing:2px;'
+    +'color:var(--sys);border:1px dashed var(--sys);background:rgba(67,180,255,.05)">＋ AGGIUNGI ESERCIZIO</button>'
+    +'<div class="stack mb16">'+rows+'</div>'
+    +'<button class="mono" data-action="wplanedit" style="width:100%;padding:11px;margin-bottom:9px;font-size:11px;letter-spacing:1px;'
+    +'color:var(--violet);border:1px solid color-mix(in srgb,var(--violet) 45%,transparent);background:transparent">✎ RINOMINA LA SCHEDA</button>'
+    +'<button class="mono" data-action="wplandel" style="width:100%;padding:11px;font-size:11px;letter-spacing:1px;color:var(--red);'
+    +'border:1px solid rgba(255,84,104,.4);background:rgba(255,84,104,.05)">🗑 ELIMINA TUTTA LA SCHEDA</button>';
+}
+
+function viewExHistory(){
+  const e=exercises.find(x=>x.id===histEx);
+  if(!e){ wView='plan'; return viewPlanUse(); }
+  const ss=exSessions(e.id), today=localDate(profile.timezone);
+  const head='<div class="row mb14"><div><div class="lbl dim">Storico</div><div class="hi">'+esc(e.name)+'</div></div>'
+    +'<button class="mono" data-action="wback2" style="padding:8px 12px;color:var(--sys);border:1px solid var(--line);background:transparent;font-size:11px">‹ Indietro</button></div>';
+  if(!ss.length) return head+'<div class="panel" style="--pg:var(--dim)"><div class="mono" style="font-size:11.5px;color:var(--dim);line-height:1.7">'
+    +'Nessun carico registrato per questo esercizio.</div></div>';
+  const cards=ss.slice(0,12).map((s,i)=>{
+    const prev=ss[i+1];
+    const v=exVolume(s), diff=prev?v-exVolume(prev):null;
+    const badge = diff===null ? ''
+      : diff>0 ? '<span class="mono" style="font-size:11px;color:var(--green)">▲ +'+fmtKg(diff)+' kg</span>'
+      : diff<0 ? '<span class="mono" style="font-size:11px;color:var(--gold)">▼ '+fmtKg(diff)+' kg</span>'
+      : '<span class="mono" style="font-size:11px;color:var(--dim)">— uguale</span>';
+    const c = s.date===today ? 'var(--green)' : (i===0?'var(--sys)':'var(--dim)');
+    return '<div class="panel" style="--pg:'+c+';padding:11px">'
+      +'<div class="row"><span class="mono" style="font-size:11px;color:'+c+'">'
+      +(s.date===today?'OGGI · ':'')+dmy(s.date).toUpperCase()+'</span>'+badge+'</div>'
+      +'<div class="mono" style="font-size:12.5px;margin-top:5px;color:var(--text)">'+s.sets.map(x=>fmtKg(x.w)).join(' · ')+' kg</div>'
+      +'<div class="mono" style="font-size:11px;color:var(--dim);margin-top:3px">volume: '+fmtKg(v)+' kg · '+s.sets.length+' serie</div></div>';
+  }).join('');
+  return head
+    +'<div class="panel mb14" style="--pg:var(--gold);text-align:center">'
+    +'<div class="mono" style="font-size:11px;letter-spacing:1px;color:var(--dim)">CARICO PIÙ ALTO REGISTRATO</div>'
+    +'<div style="font-family:var(--num);font-size:26px;font-weight:800;color:var(--gold);margin-top:4px">'+fmtKg(exBest(e.id))+' kg</div>'
+    +'<div class="mono" style="font-size:11px;color:var(--dim);margin-top:2px">'+ss.length+' allenamenti registrati</div></div>'
+    +'<div class="stack">'+cards+'</div>';
+}
+
 /* ---- CALENDARIO (turni calcolati + eccezioni dal database) ---- */
 async function loadCal(){
   const [{data},{data:evs}]=await Promise.all([
@@ -1373,13 +1664,13 @@ function viewCalendar(){
       box-shadow:${isToday?'0 0 10px -3px var(--glow)':'none'};display:flex;flex-direction:column;justify-content:space-between">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <span style="font-family:var(--disp);font-size:13px;font-weight:600;color:${filled?col:'var(--dim)'}">${d}</span>
-        <span style="font-size:9px;color:${filled?col:'transparent'}">${ic}</span></div>
-      <span class="mono" style="font-size:8px;letter-spacing:.5px;color:${filled?col:'transparent'}">${lab}</span>
+        <span style="font-size:11px;color:${filled?col:'transparent'}">${ic}</span></div>
+      <span class="mono" style="font-size:11px;letter-spacing:.5px;color:${filled?col:'transparent'}">${lab}</span>
       ${(events[ds]||[]).length?'<i style="position:absolute;bottom:3px;right:3px;width:5px;height:5px;border-radius:50%;background:var(--glow);box-shadow:0 0 6px var(--glow)"></i>':''}</div>`;
   }
 
   const leg=[['diurno','8–20'],['notte','20–8'],['salto','salto turno'],['ferie','ferie'],['richiamo','richiamo']]
-    .map(([k,t])=>`<span class="mono" style="font-size:9px;color:${SHIFT_COLOR[k]};display:inline-flex;align-items:center;gap:4px">
+    .map(([k,t])=>`<span class="mono" style="font-size:11px;color:${SHIFT_COLOR[k]};display:inline-flex;align-items:center;gap:4px">
       <i style="width:8px;height:8px;background:${SHIFT_COLOR[k]};display:inline-block"></i>${t}</span>`).join('');
 
   return `<div class="row mb14">
@@ -1389,14 +1680,14 @@ function viewCalendar(){
         <button class="mono" data-action="mnext" style="padding:6px 10px;color:var(--sys);border:1px solid var(--line);background:transparent">›</button>
       </div></div>
     <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px">
-      ${['L','M','M','G','V','S','D'].map(g=>`<div class="mono" style="text-align:center;font-size:9px;color:var(--dim)">${g}</div>`).join('')}</div>
+      ${['L','M','M','G','V','S','D'].map(g=>`<div class="mono" style="text-align:center;font-size:11px;color:var(--dim)">${g}</div>`).join('')}</div>
     <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px">${cells}</div>
     <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px">${leg}</div>
     <div class="panel mt8" style="--pg:var(--violet);margin-top:14px;text-align:center">
       <div class="mono" style="font-size:11px;letter-spacing:1px;color:var(--violet)">FERIE ${new Date().getFullYear()}</div>
       <div style="font-family:var(--num);font-size:22px;color:var(--glow);margin-top:4px">${ferieCount} / 27</div>
-      <div class="mono" style="font-size:9px;color:var(--dim);margin-top:4px">${27-ferieCount} giorni disponibili</div></div>
-    <div class="mono" style="font-size:9px;color:var(--dim);margin-top:10px;text-align:center">tocca un giorno per ferie o richiamo</div>`;
+      <div class="mono" style="font-size:11px;color:var(--dim);margin-top:4px">${27-ferieCount} giorni disponibili</div></div>
+    <div class="mono" style="font-size:11px;color:var(--dim);margin-top:10px;text-align:center">tocca un giorno per ferie o richiamo</div>`;
 }
 
 /* ---- LIBRERIA (collegata al database) ---- */
@@ -1416,21 +1707,16 @@ async function finishBook(id){
   await loadBooks(); await measureMetrics(); await checkSpecialQuests();
   toast('Libro completato!',getVar('--green')); render();
 }
-async function delBook(id){
-  if(!confirm('Vuoi eliminare questo libro dalla libreria?')) return;
-  const {error}=await sb.from('books').delete().eq('id',id);
-  if(error){ toast('Errore, riprova',getVar('--red')); return; }
-  await loadBooks(); toast('Libro eliminato',getVar('--dim')); render();
-}
+async function delBook(id){ swipeDelete('book',id); }
 function bookForm(){
   const box=`<div class="box"><div style="padding:10px 14px;border-bottom:1px solid color-mix(in srgb,var(--violet) 35%,transparent);display:flex;justify-content:space-between;align-items:center">
     <span class="mono" style="font-size:11px;letter-spacing:2px;color:var(--violet)">＋ NUOVO LIBRO</span>
     <button data-action="close-special" style="background:none;border:none;color:var(--dim);font-size:16px">✕</button></div>
     <div style="padding:18px">
-      <div class="mono" style="font-size:10px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">TITOLO</div>
+      <div class="mono" style="font-size:11px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">TITOLO</div>
       <input data-book="title" placeholder="Titolo del libro"
         style="width:100%;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--glow);font-size:14px;padding:10px;outline:none;margin-bottom:14px">
-      <div class="mono" style="font-size:10px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">AUTORE</div>
+      <div class="mono" style="font-size:11px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">AUTORE</div>
       <input data-book="author" placeholder="Autore (facoltativo)"
         style="width:100%;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--glow);font-size:14px;padding:10px;outline:none;margin-bottom:20px">
       <button class="btnfull" data-action="save-book">AGGIUNGI ALLA LIBRERIA</button>
@@ -1444,37 +1730,34 @@ function viewLibrary(){
     return `<div class="row mb14"><div><div class="lbl dim">Memoria</div><div class="hi">Libreria</div></div></div>
       <div class="mono" style="font-size:12px;color:var(--dim)">caricamento…</div>`;
   }
-  const reading=books.filter(b=>b.status==='reading');
+  const reading=books.filter(b=>b.status==='reading' && !isPending('book',b.id));
   const finished=books.filter(b=>b.status==='finished')
     .sort((a,b)=>(b.finished_date||'').localeCompare(a.finished_date||''));
 
-  const readCards = reading.length ? reading.map(b=>`
+  const readCards = reading.length ? reading.map(b=>swipeRow('book',b.id,`
     <div class="panel" style="--pg:var(--violet);padding:14px;margin-bottom:9px">
       <div style="width:26px;height:3px;background:var(--violet);box-shadow:0 0 8px var(--violet);margin-bottom:10px"></div>
       <b style="font-family:var(--disp);font-size:16px">${esc(b.title)}</b>
-      <div class="mono" style="font-size:10px;color:var(--dim);margin-top:2px">${esc(b.author||'—')}</div>
+      <div class="mono" style="font-size:11px;color:var(--dim);margin-top:2px">${esc(b.author||'—')}</div>
       <div style="display:flex;gap:8px;margin-top:14px">
         <button class="mono" data-action="finish-book" data-id="${b.id}"
           style="flex:1;padding:9px;font-size:11px;letter-spacing:1px;color:var(--green);border:1px solid color-mix(in srgb,var(--green) 45%,transparent);background:color-mix(in srgb,var(--green) 7%,transparent)">✔ SEGNA FINITO</button>
-        <button class="mono" data-action="del-book" data-id="${b.id}"
-          style="padding:9px 13px;font-size:12px;color:var(--red);border:1px solid rgba(255,84,104,.35);background:transparent">🗑</button>
-      </div></div>`).join('')
+      </div></div>`)).join('')
     : `<div class="panel" style="--pg:var(--dim);padding:14px"><div class="mono" style="font-size:11px;color:var(--dim);line-height:1.7">Nessun libro in lettura.<br>Tocca “＋ Aggiungi libro” per iniziare.</div></div>`;
 
-  const finCards = finished.map(b=>`
+  const finCards = finished.filter(b=>!isPending('book',b.id)).map(b=>`
     <div class="panel" style="--pg:var(--gold);padding:12px;min-height:118px;display:flex;flex-direction:column;justify-content:space-between">
       <div><div style="width:26px;height:3px;background:var(--gold);box-shadow:0 0 8px var(--gold);margin-bottom:10px"></div>
       <b style="font-family:var(--disp);font-size:14px">${esc(b.title)}</b>
-      <div class="mono" style="font-size:10px;color:var(--dim);margin-top:2px">${esc(b.author||'—')}</div></div>
+      <div class="mono" style="font-size:11px;color:var(--dim);margin-top:2px">${esc(b.author||'—')}</div></div>
       <div class="row" style="align-items:flex-end;margin-top:8px">
-        <span class="mono" style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--dim)">${fmtBookDate(b.finished_date)}</span>
-        <button data-action="del-book" data-id="${b.id}" style="background:none;border:none;color:var(--dim);font-size:13px;padding:0;cursor:pointer">🗑</button>
+        <span class="mono" style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--dim)">${fmtBookDate(b.finished_date)}</span>
       </div></div>`).join('');
 
   return `<div class="row mb14">
       <div><div class="lbl dim">Memoria</div><div class="hi">Libreria</div></div>
       <div style="text-align:right"><div style="font-family:var(--num);font-size:20px;color:var(--glow)">${finished.length}</div>
-      <div class="mono" style="font-size:8px;color:var(--dim);letter-spacing:1px">LETTI</div></div></div>
+      <div class="mono" style="font-size:11px;color:var(--dim);letter-spacing:1px">LETTI</div></div></div>
     <button class="mono" data-action="addbook" style="width:100%;padding:12px;margin-bottom:18px;font-size:12px;letter-spacing:2px;color:var(--sys);border:1px dashed var(--sys);background:rgba(67,180,255,.05)">＋ AGGIUNGI LIBRO</button>
     <div class="lbl" style="color:var(--violet)">In lettura</div>
     <div class="mt8 mb18">${readCards}</div>
@@ -1489,15 +1772,15 @@ function viewProfile(){
     let inner, action='';
     if(ph){
       inner=`<div style="position:absolute;inset:0;background-image:url('${ph.url}');background-size:cover;background-position:center"></div>
-        <span class="mono" style="position:absolute;bottom:5px;left:6px;font-size:9px;color:var(--glow);text-shadow:0 0 4px #000,0 0 4px #000">LV.${m}</span>`;
+        <span class="mono" style="position:absolute;bottom:5px;left:6px;font-size:11px;color:var(--glow);text-shadow:0 0 4px #000,0 0 4px #000">LV.${m}</span>`;
       action=`data-action="viewphoto" data-level="${m}"`;
     } else if(u){
       inner=`<span style="font-size:26px;color:var(--sys)">＋</span>
-        <span class="mono" style="position:absolute;bottom:6px;font-size:9px;color:var(--sys)">AGGIUNGI</span>`;
+        <span class="mono" style="position:absolute;bottom:6px;font-size:11px;color:var(--sys)">AGGIUNGI</span>`;
       action=`data-action="addphoto" data-level="${m}"`;
     } else {
       inner=`<span style="font-size:26px">🔒</span>
-        <span class="mono" style="position:absolute;bottom:6px;font-size:9px;color:var(--dim)">BLOCCATA</span>`;
+        <span class="mono" style="position:absolute;bottom:6px;font-size:11px;color:var(--dim)">BLOCCATA</span>`;
     }
     return `<div style="flex:0 0 auto;width:92px">
       <div ${action} style="height:116px;border:1px solid ${u?'var(--glow)':'var(--line)'};cursor:${u?'pointer':'default'};
@@ -1510,20 +1793,20 @@ function viewProfile(){
       <div style="width:74px;height:88px;flex:0 0 auto;border:1px solid color-mix(in srgb,var(--violet) 40%,transparent);
         background:linear-gradient(160deg,rgba(181,123,255,.13),transparent);display:grid;place-items:center;color:var(--violet);font-size:32px">◈</div>
       <div><div class="lbl" style="color:var(--violet)">Livello attuale</div><div class="lvnum">${profile.level}</div>
-      <div class="mono" style="font-size:10px;color:var(--dim);margin-top:4px">GRADO ${profile.rank} · ${esc(titleForLevel(profile.max_level_reached).toUpperCase())}</div>
-      <div class="mono" style="font-size:9px;color:var(--sys);margin-top:5px;letter-spacing:1px">◈ APRI LO STATUS</div></div></div>
+      <div class="mono" style="font-size:11px;color:var(--dim);margin-top:4px">GRADO ${profile.rank} · ${esc(titleForLevel(profile.max_level_reached).toUpperCase())}</div>
+      <div class="mono" style="font-size:11px;color:var(--sys);margin-top:5px;letter-spacing:1px">◈ APRI LO STATUS</div></div></div>
     <div style="display:flex;gap:8px" class="mb18">${stats.map(([l,v,c])=>`<div class="panel" style="--pg:var(${c});flex:1;padding:10px;text-align:center">
       <div style="font-family:var(--num);font-size:18px;color:var(${c})">${v}</div>
-      <div class="mono" style="font-size:9px;color:var(--dim);letter-spacing:1px;margin-top:3px">${l.toUpperCase()}</div></div>`).join('')}</div>
+      <div class="mono" style="font-size:11px;color:var(--dim);letter-spacing:1px;margin-top:3px">${l.toUpperCase()}</div></div>`).join('')}</div>
     ${specialSection()}
     <div class="lbl">Archivio Estetico</div>
-    <div class="mono" style="font-size:10px;color:var(--dim);margin:4px 0 10px">una foto ogni 20 livelli</div>
+    <div class="mono" style="font-size:11px;color:var(--dim);margin:4px 0 10px">una foto ogni 20 livelli</div>
     <div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:6px">${ms}</div>
     <button class="mono" data-action="gotomanage" style="width:100%;padding:12px;margin-top:4px;font-size:12px;letter-spacing:2px;color:var(--violet);border:1px solid color-mix(in srgb,var(--violet) 45%,transparent);background:color-mix(in srgb,var(--violet) 6%,transparent)">⚙ GESTISCI QUEST</button>
     <div style="margin-top:22px;padding-top:14px;border-top:1px solid var(--line)">
-      <div class="mono" style="font-size:9px;color:var(--dim);letter-spacing:1px;margin-bottom:8px">DEMO · SIMULA FLUTTUAZIONE</div>
+      <div class="mono" style="font-size:11px;color:var(--dim);letter-spacing:1px;margin-bottom:8px">DEMO · SIMULA FLUTTUAZIONE</div>
       <button class="demo" data-action="skip">✕ QUEST GIORNALIERA SALTATA (−${SKIP_PENALTY} XP)</button>
-      <div class="mono" style="font-size:9px;color:var(--dim);text-align:center;margin-top:12px">versione ${APP_VERSION}</div></div>`;
+      <div class="mono" style="font-size:11px;color:var(--dim);text-align:center;margin-top:12px">versione ${APP_VERSION}</div></div>`;
 }
 
 /* ---------- sezione Quest Speciali nel Profilo ---------- */
@@ -1534,44 +1817,201 @@ function specialSection(){
     const s=special[t];
     if(!s){
       return `<div class="panel" style="--pg:var(--violet);padding:12px;margin-bottom:9px">
-        <div class="row"><div style="flex:1"><div class="mono" style="font-size:10px;color:var(--violet)">SOGLIA ${t} · DISPONIBILE</div>
+        <div class="row"><div style="flex:1"><div class="mono" style="font-size:11px;color:var(--violet)">SOGLIA ${t} · DISPONIBILE</div>
           <b style="font-family:var(--disp);font-size:15px">Quest speciale da affrontare</b></div>
           <button class="mono" data-action="choose-special" data-th="${t}" style="padding:9px 13px;font-size:11px;letter-spacing:1px;color:var(--violet);border:1px solid color-mix(in srgb,var(--violet) 45%,transparent);background:color-mix(in srgb,var(--violet) 7%,transparent)">SCEGLI</button></div></div>`;
     }
     if(s.status==='completed'){
       return `<div class="panel" style="--pg:var(--green);padding:12px;margin-bottom:9px;opacity:.9">
-        <div class="mono" style="font-size:10px;color:var(--green)">SOGLIA ${t} · COMPLETATA ✓</div>
+        <div class="mono" style="font-size:11px;color:var(--green)">SOGLIA ${t} · COMPLETATA ✓</div>
         <b style="font-family:var(--disp);font-size:15px">${esc(s.title)}</b>
-        <div class="mono" style="font-size:10px;color:var(--dim);margin-top:2px">Ricompensa incassata: +${s.xp_reward} XP</div></div>`;
+        <div class="mono" style="font-size:11px;color:var(--dim);margin-top:2px">Ricompensa incassata: +${s.xp_reward} XP</div></div>`;
     }
     const cur=(metricNow&&metricNow[s.metric]!==undefined)?metricNow[s.metric]:s.baseline;
     const tot=Math.max(1,s.goal-s.baseline);
     const prog=Math.max(0,Math.min(tot, cur-s.baseline));
     const pct=Math.min(100,prog/tot*100);
     return `<div class="panel" style="--pg:var(--gold);padding:12px;margin-bottom:9px">
-      <div class="mono" style="font-size:10px;color:var(--gold)">SOGLIA ${t} · IN CORSO</div>
+      <div class="mono" style="font-size:11px;color:var(--gold)">SOGLIA ${t} · IN CORSO</div>
       <b style="font-family:var(--disp);font-size:15px">${esc(s.title)}</b>
-      <div class="mono" style="font-size:10px;color:var(--dim);margin:2px 0 8px;line-height:1.4">${esc(s.description)}</div>
-      <div class="row mono" style="font-size:10px;color:var(--dim);margin-bottom:5px"><span>${prog}/${tot} ${METRIC_LABEL[s.metric]||''}</span><span style="color:var(--gold)">+${s.xp_reward} XP</span></div>
+      <div class="mono" style="font-size:11px;color:var(--dim);margin:2px 0 8px;line-height:1.4">${esc(s.description)}</div>
+      <div class="row mono" style="font-size:11px;color:var(--dim);margin-bottom:5px"><span>${prog}/${tot} ${METRIC_LABEL[s.metric]||''}</span><span style="color:var(--gold)">+${s.xp_reward} XP</span></div>
       <div class="bar"><i style="width:${pct}%;background:linear-gradient(90deg,var(--gold),var(--glow));box-shadow:0 0 12px var(--gold)"></i></div></div>`;
   }).join('');
   return `<div class="lbl" style="color:var(--violet);margin-bottom:8px">Quest Speciali</div>${cards}
     <div style="height:14px"></div>`;
 }
 
+/* ============================================================
+   v2.8 — REVISIONE iPHONE
+   L'app si usa al 99% dal telefono, in palestra, con una mano.
+   Qui dentro: scorrimento laterale per eliminare (con ANNULLA al posto
+   della finestra "sei sicuro?"), conferme fatte con un pannello dell'app
+   invece dell'avviso di Safari, schermo tenuto acceso durante l'allenamento.
+   ============================================================ */
+
+/* ---------- eliminazione con scorrimento + ANNULLA ----------
+   L'elemento non viene cancellato subito: sparisce dalla schermata e la
+   cancellazione vera parte dopo 5 secondi, o subito se cambi pagina.
+   Così ANNULLA non deve "resuscitare" niente dal database.            */
+let pendingDel=null, undoTimer=null, justSwiped=false;
+const isPending = (kind,id) => !!(pendingDel && pendingDel.kind===kind && pendingDel.id===id);
+
+function swipeRow(kind,id,inner){
+  return '<div class="sw" data-sw="'+kind+'|'+id+'">'
+       + '<div class="del" data-action="swdel" data-sw="'+kind+'|'+id+'">🗑 ELIMINA</div>'
+       + '<div class="front">'+inner+'</div></div>';
+}
+function nomeDi(kind,id){
+  if(kind==='ex')   { const e=exercises.find(x=>x.id===id); return e?e.name:'Esercizio'; }
+  if(kind==='plan') { const p=plans.find(x=>x.id===id);     return p?p.name:'Scheda'; }
+  if(kind==='book') { const b=books.find(x=>x.id===id);     return b?b.title:'Libro'; }
+  return 'Elemento';
+}
+function swipeDelete(kind,id){
+  flushDelete();                       // se ce n'era un altro in attesa, si esegue adesso
+  pendingDel={kind,id};
+  const u=document.getElementById('undo');
+  u.querySelector('span').textContent='“'+nomeDi(kind,id)+'” eliminato';
+  u.style.display='flex';
+  clearTimeout(undoTimer);
+  undoTimer=setTimeout(()=>{ flushDelete(); },5000);
+  sfxBad();
+  render();
+}
+function annullaDelete(){
+  clearTimeout(undoTimer); pendingDel=null;
+  document.getElementById('undo').style.display='none';
+  toast('ANNULLATO',getVar('--glow'));
+  render();
+}
+async function flushDelete(){
+  const p=pendingDel; if(!p) return;
+  pendingDel=null; clearTimeout(undoTimer);
+  document.getElementById('undo').style.display='none';
+  try{
+    if(p.kind==='ex'){
+      await sb.from('workout_logs').delete().eq('user_id',OWNER_ID).eq('exercise_id',p.id);
+      await sb.from('workout_exercises').delete().eq('id',p.id);
+      if(openEx===p.id) openEx=null;
+      await loadWorkout();
+    }else if(p.kind==='plan'){
+      const ids=exercises.filter(e=>e.plan_id===p.id).map(e=>e.id);
+      if(ids.length){
+        await sb.from('workout_logs').delete().eq('user_id',OWNER_ID).in('exercise_id',ids);
+        await sb.from('workout_exercises').delete().in('id',ids);
+      }
+      await sb.from('workout_plans').delete().eq('id',p.id);
+      if(curPlan===p.id){ curPlan=null; openEx=null; wView='list'; }
+      await loadWorkout();
+    }else if(p.kind==='book'){
+      await sb.from('books').delete().eq('id',p.id);
+      await loadBooks();
+      await measureMetrics();
+    }
+  }catch(e){ toast('Errore, riprova',getVar('--red')); }
+  render();
+}
+
+/* ---------- il gesto vero e proprio ---------- */
+(function initSwipe(){
+  const sc=document.getElementById('screen');
+  let el=null, front=null, x0=0, base=0, dx=0;
+  sc.addEventListener('pointerdown',e=>{
+    const t=e.target.closest('.sw');
+    if(!t || e.target.closest('.del')) return;
+    el=t; front=t.querySelector('.front');
+    base=t.classList.contains('open')?-104:0;
+    x0=e.clientX; dx=base;
+    front.style.transition='none';
+  });
+  sc.addEventListener('pointermove',e=>{
+    if(!el) return;
+    dx=Math.max(-150,Math.min(0,base+(e.clientX-x0)));
+    front.style.transform='translateX('+dx+'px)';
+  });
+  const fine=()=>{
+    if(!el) return;
+    front.style.transition=''; front.style.transform='';
+    const aperto = dx<-52;
+    el.classList.toggle('open',aperto);
+    justSwiped = Math.abs(dx-base)>6;          // evita che il tocco apra anche la riga
+    setTimeout(()=>{ justSwiped=false; },260);
+    el=null;
+  };
+  sc.addEventListener('pointerup',fine);
+  sc.addEventListener('pointercancel',fine);
+  sc.addEventListener('pointerleave',fine);
+})();
+
+/* ---------- conferma con un pannello dell'app (niente avvisi di Safari) ---------- */
+function askConfirm(titolo,testo,etichetta){
+  return new Promise(res=>{
+    const box='<div class="box">'
+      +'<div style="padding:16px 18px 20px">'
+      +'<div class="mono" style="font-size:11px;letter-spacing:2px;color:var(--violet);text-align:center;margin-bottom:8px">⚠ SISTEMA</div>'
+      +'<div style="font-family:var(--disp);font-size:19px;font-weight:700;text-align:center;line-height:1.3;margin-bottom:6px">'+esc(titolo)+'</div>'
+      +'<div class="mono" style="font-size:12px;color:var(--dim);text-align:center;line-height:1.6;margin-bottom:20px">'+esc(testo)+'</div>'
+      +'<button data-cf="1" style="width:100%;padding:14px;margin-bottom:9px;font-family:var(--mono);font-size:13px;'
+      +'letter-spacing:2px;color:var(--red);border:1px solid rgba(255,84,104,.5);background:rgba(255,84,104,.08)">'+esc(etichetta)+'</button>'
+      +'<button data-cf="0" style="width:100%;padding:14px;font-family:var(--mono);font-size:13px;letter-spacing:2px;'
+      +'color:var(--text);border:1px solid var(--line);background:rgba(255,255,255,.04)">ANNULLA</button>'
+      +'</div></div>';
+    const m=$('#special'); m.innerHTML=box; m.style.display='grid'; m._cf=res;
+  });
+}
+
+/* ---------- schermo sempre acceso mentre sei dentro una scheda ---------- */
+let wakeLock=null;
+async function keepAwake(on){
+  try{
+    if(on && 'wakeLock' in navigator && !wakeLock){
+      wakeLock=await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release',()=>{ wakeLock=null; });
+    }else if(!on && wakeLock){ await wakeLock.release(); wakeLock=null; }
+  }catch(e){ /* non supportato o negato: pazienza */ }
+}
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='hidden') flushDelete();
+  else if(tab==='workout' && wView==='plan') keepAwake(true);
+});
+window.addEventListener('pagehide',()=>{ flushDelete(); });
+
+
 /* ---------- eventi ---------- */
 document.getElementById('nav').addEventListener('click',e=>{
-  const b=e.target.closest('button'); if(!b) return; tab=b.dataset.tab; render();
+  const b=e.target.closest('button'); if(!b) return;
+  flushDelete();                       // cambiando pagina l'eliminazione diventa definitiva
+  tab=b.dataset.tab; render();
+});
+document.getElementById('undo').addEventListener('click',e=>{
+  if(e.target.closest('[data-undo]')) annullaDelete();
 });
 document.getElementById('screen').addEventListener('click',e=>{
   const el=e.target.closest('[data-action]'); if(!el) return;
   const a=el.dataset.action;
+  if(justSwiped && a!=='swdel') return;              // stavi scorrendo, non toccando
+  if(a==='swdel'){ const p=el.dataset.sw.split('|'); swipeDelete(p[0],p[1]); return; }
   if(a==='quest') completeQuest(el.dataset.id);
   else if(a==='music') toggleMusic();
   else if(a==='spotify') openSpotify();
   else if(a==='skip') skipDay();
-  else if(a==='plan'){ planIdx=+el.dataset.i; render(); }
-  else if(a==='savew') saveWeight(el.dataset.id, el);
+  else if(a==='wopen'){ curPlan=el.dataset.id; openEx=null; wView='plan'; render(); }
+  else if(a==='wback'){ wView='list'; openEx=null; render(); }
+  else if(a==='wback2'){ wView='plan'; render(); }
+  else if(a==='wex'){ openEx=(openEx===el.dataset.id?null:el.dataset.id); render(); }
+  else if(a==='wsave') saveExerciseLogs(el.dataset.id);
+  else if(a==='waddset'){ extraSets[el.dataset.id]=(extraSets[el.dataset.id]||0)+1; render(); }
+  else if(a==='whist'){ histEx=el.dataset.id; wView='hist'; render(); }
+  else if(a==='wedit'){ wView='edit'; render(); }
+  else if(a==='wdone'){ wView='plan'; render(); }
+  else if(a==='wnewplan') planForm(null);
+  else if(a==='wplanedit') planForm(curPlan);
+  else if(a==='wplandel') delPlan();
+  else if(a==='wnewex') exForm(null);
+  else if(a==='wexedit') exForm(el.dataset.id);
+  else if(a==='wup') moveExercise(el.dataset.id,-1);
+  else if(a==='wdown') moveExercise(el.dataset.id,1);
   else if(a==='day') dayMenu(el.dataset.day);
   else if(a==='mprev'){ calMonth.m--; if(calMonth.m<0){calMonth.m=11;calMonth.y--;} render(); }
   else if(a==='mnext'){ calMonth.m++; if(calMonth.m>11){calMonth.m=0;calMonth.y++;} render(); }
@@ -1602,6 +2042,12 @@ document.getElementById('screen').addEventListener('click',e=>{
     }
   }
 });
+/* v2.7: tiene in memoria i pesi che stai scrivendo, così ridisegnare la
+   schermata (es. "＋ aggiungi una serie") non ti cancella quello che hai già messo */
+document.getElementById('screen').addEventListener('input',e=>{
+  const el=e.target.closest('input[data-set]');
+  if(el) draft[el.dataset.set]=el.value;
+});
 document.getElementById('photoInput').addEventListener('change',e=>{
   const f=e.target.files&&e.target.files[0];
   if(f) uploadPhoto(f, uploadLevel);
@@ -1620,13 +2066,23 @@ document.getElementById('special').addEventListener('click',e=>{
   if(dp){ delPhoto(+dp.dataset.level); return; }
   const sq=e.target.closest('[data-action="save-quest"]');
   if(sq){ saveQuestForm(); return; }
+  const spl=e.target.closest('[data-action="save-plan"]');
+  if(spl){ savePlanForm(); return; }
+  const sex=e.target.closest('[data-action="save-ex"]');
+  if(sex){ saveExForm(); return; }
   const wk=e.target.closest('[data-action="welcome-ok"]');
   if(wk){ $('#special').style.display='none';
     if(musicPref&&bgmOk&&bgm&&bgm.paused) bgm.play().catch(()=>{}); return; }
   const ac=e.target.closest('[data-action="accept-ch"]');
-  if(ac){ if(confirm('Scegliere questa sfida? La scelta è definitiva.')) acceptChallenge(+ac.dataset.th, ac.dataset.cid); return; }
+  if(ac){ const th=+ac.dataset.th, cid=ac.dataset.cid;
+    askConfirm('Accettare questa sfida?','La scelta è definitiva: non potrai cambiarla.','ACCETTO LA SFIDA')
+      .then(ok=>{ if(ok) acceptChallenge(th,cid); }); return; }
+  const cf=e.target.closest('[data-cf]');
+  if(cf){ const m=$('#special'); m.style.display='none';
+    const r=m._cf; m._cf=null; if(r) r(cf.dataset.cf==='1'); return; }
   if(e.target.closest('[data-action="close-special"]') || e.target.id==='special'){
-    $('#special').style.display='none';
+    const m=$('#special'); m.style.display='none';
+    const r=m._cf; m._cf=null; if(r) r(false);
   }
 });
 
