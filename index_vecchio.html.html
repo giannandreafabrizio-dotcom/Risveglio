@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#05070F" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<title>Risveglio</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Orbitron:wght@700;800&family=Share+Tech+Mono&display=swap');
+
+:root{
+  --bg:#05070F; --panel:rgba(14,22,42,.72); --line:rgba(90,150,230,.28);
+  --sys:#43B4FF; --glow:#6FE9FF; --violet:#B57BFF; --gold:#FFC663;
+  --green:#4DFFA6; --red:#FF5468; --text:#DCE6FA; --dim:#7C8AAE;
+  --disp:'Rajdhani',sans-serif; --mono:'Share Tech Mono',monospace; --num:'Orbitron',sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{
+  background:radial-gradient(120% 80% at 50% -10%, #10203f 0%, var(--bg) 60%);
+  color:var(--text); font-family:var(--disp);
+  background-attachment:fixed;
+}
+#app{max-width:480px;margin:0 auto;min-height:100vh;position:relative;
+  padding:calc(24px + env(safe-area-inset-top)) 16px calc(84px + env(safe-area-inset-bottom));}
+#app::before{content:"";position:fixed;inset:0;max-width:480px;margin:0 auto;pointer-events:none;
+  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+  background-size:34px 34px;opacity:.13;}
+
+/* ---- system panel ---- */
+.panel{position:relative;background:var(--panel);border:1px solid var(--line);
+  box-shadow:0 0 18px -6px color-mix(in srgb,var(--pg,var(--sys)) 50%,transparent),
+             inset 0 0 22px -12px color-mix(in srgb,var(--pg,var(--sys)) 40%,transparent);
+  backdrop-filter:blur(4px);padding:14px;}
+.panel::before,.panel::after{content:"";position:absolute;width:12px;height:12px;pointer-events:none;
+  border-color:var(--pg,var(--sys));}
+.panel::before{top:-1px;left:-1px;border-top:2px solid;border-left:2px solid}
+.panel::after{bottom:-1px;right:-1px;border-bottom:2px solid;border-right:2px solid}
+
+.lbl{font-family:var(--mono);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--sys)}
+.mono{font-family:var(--mono)}
+.dim{color:var(--dim)}
+.row{display:flex;align-items:center;justify-content:space-between}
+button{font-family:inherit;cursor:pointer}
+input{font-family:var(--mono)}
+
+/* ---- header ---- */
+.hi{font-family:var(--disp);font-size:22px;font-weight:700;line-height:1;color:var(--text)}
+
+/* ---- level ---- */
+.lvnum{font-family:var(--num);font-size:46px;font-weight:800;line-height:.9;color:var(--glow);
+  text-shadow:0 0 20px rgba(67,180,255,.6)}
+.rank{font-family:var(--disp);font-size:30px;font-weight:800;line-height:1;color:var(--violet);
+  text-shadow:0 0 16px rgba(181,123,255,.5)}
+.bar{height:9px;background:rgba(255,255,255,.06);border:1px solid var(--line);position:relative;overflow:hidden}
+.bar>i{position:absolute;inset:0;background:linear-gradient(90deg,var(--sys),var(--glow));
+  box-shadow:0 0 12px var(--glow);transition:width .6s cubic-bezier(.2,.8,.2,1)}
+
+/* ---- quest card ---- */
+.q{display:flex;align-items:center;gap:12px;padding:12px;cursor:pointer;transition:opacity .3s}
+.q.done{opacity:.55;cursor:default}
+.q .ic{width:34px;height:34px;flex:0 0 auto;display:grid;place-items:center;
+  border:1px solid color-mix(in srgb,var(--cat) 45%,transparent);color:var(--cat);
+  background:color-mix(in srgb,var(--cat) 8%,transparent);font-family:var(--mono);font-size:15px}
+.q .t{flex:1;min-width:0}
+.q .t b{font-family:var(--disp);font-size:15px;font-weight:600;color:var(--text);display:block}
+.q.done .t b{text-decoration:line-through}
+.q .t span{font-family:var(--mono);font-size:10px;color:var(--dim);display:block;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.q .xp{font-family:var(--mono);font-size:11px;color:var(--cat);flex:0 0 auto}
+.q .ck{width:26px;height:26px;flex:0 0 auto;display:grid;place-items:center;
+  border:1.5px solid color-mix(in srgb,var(--cat) 45%,transparent);color:var(--green);font-family:var(--mono)}
+.q.done .ck{border-color:var(--green);background:rgba(77,255,166,.12)}
+
+.stack{display:flex;flex-direction:column;gap:9px}
+.mb14{margin-bottom:14px}.mb16{margin-bottom:16px}.mb18{margin-bottom:18px}.mt8{margin-top:8px}
+
+/* ---- bottom nav ---- */
+#nav{position:fixed;left:0;right:0;bottom:0;max-width:480px;margin:0 auto;height:74px;
+  padding-bottom:env(safe-area-inset-bottom);
+  background:rgba(6,10,22,.92);border-top:1px solid var(--line);display:flex;backdrop-filter:blur(8px);z-index:20}
+#nav button{flex:1;background:none;border:none;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:4px;color:var(--dim);position:relative}
+#nav button.on{color:var(--glow)}
+#nav button.on::before{content:"";position:absolute;top:0;width:26px;height:2px;background:var(--glow);box-shadow:0 0 8px var(--glow)}
+#nav .ni{font-size:19px;line-height:1}
+#nav .nt{font-family:var(--mono);font-size:9px;letter-spacing:1px}
+
+/* ---- toast ---- */
+#toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:40;display:none;
+  background:rgba(6,10,22,.95);padding:8px 16px;font-family:var(--mono);font-size:13px;
+  letter-spacing:1px;white-space:nowrap;animation:pop .2s ease-out}
+@keyframes pop{from{opacity:0;transform:translate(-50%,-8px)}to{opacity:1;transform:translate(-50%,0)}}
+
+/* ---- special quest modal ---- */
+#special{position:fixed;inset:0;z-index:60;display:none;place-items:center;padding:24px;
+  background:rgba(3,5,12,.86);backdrop-filter:blur(3px)}
+#special .box{width:100%;max-width:400px;background:#0C1428;border:1px solid var(--violet);
+  box-shadow:0 0 40px -6px var(--violet), inset 0 0 40px -20px var(--violet);animation:sq .35s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes sq{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
+
+.btnfull{width:100%;padding:13px;font-family:var(--mono);font-size:13px;letter-spacing:2px;
+  color:#05070F;font-weight:700;border:none;background:linear-gradient(90deg,var(--violet),var(--glow));
+  box-shadow:0 0 20px -4px var(--violet)}
+.demo{width:100%;padding:11px;font-family:var(--mono);font-size:12px;letter-spacing:1px;
+  color:var(--red);border:1px solid rgba(255,84,104,.4);background:rgba(255,84,104,.05)}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.chip{font-family:var(--mono);font-size:10px;letter-spacing:.5px;padding:3px 8px}
+
+/* ---- v2.0 effetti "Sistema" ---- */
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:5;
+  background:repeating-linear-gradient(0deg,rgba(111,233,255,.025) 0 1px,transparent 1px 3px)}
+body::before{content:"";position:fixed;left:0;right:0;top:-160px;height:140px;pointer-events:none;z-index:5;
+  background:linear-gradient(180deg,transparent,rgba(111,233,255,.055),transparent);
+  animation:beam 10s linear infinite}
+@keyframes beam{to{transform:translateY(130vh)}}
+.bar{border-radius:0}
+.bar>i::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.4) 50%,transparent 70%);
+  transform:translateX(-100%);animation:sheen 2.8s ease-in-out infinite}
+@keyframes sheen{55%,100%{transform:translateX(100%)}}
+.lvltxt{font-family:var(--disp);font-size:32px;font-weight:800;letter-spacing:9px;color:var(--text);
+  text-shadow:0 0 16px var(--sys);animation:lvpulse 1.1s ease-in-out infinite alternate}
+@keyframes lvpulse{to{text-shadow:0 0 34px var(--glow),0 0 10px var(--glow)}}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app"><div id="screen"></div></div>
+
+<nav id="nav">
+  <button data-tab="home" class="on"><span class="ni">⚡</span><span class="nt">Quest</span></button>
+  <button data-tab="workout"><span class="ni">🏋</span><span class="nt">Schede</span></button>
+  <button data-tab="cal"><span class="ni">▦</span><span class="nt">Calendario</span></button>
+  <button data-tab="lib"><span class="ni">▤</span><span class="nt">Libreria</span></button>
+  <button data-tab="me"><span class="ni">◈</span><span class="nt">Profilo</span></button>
+</nav>
+
+<div id="toast"></div>
+<div id="special"></div>
+<input type="file" id="photoInput" accept="image/*" style="display:none">
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script>
+/* ============================================================
+   RISVEGLIO — app a file singolo (stile NutriGest)
+   ============================================================ */
+
+/* Le chiavi Supabase stanno in config.js (file separato, non si tocca mai).
+   Questo file NON va più modificato: sostituiscilo e basta. */
+const CFG = window.RISVEGLIO_CONFIG || {};
+const SUPABASE_URL      = CFG.url || "";
+const SUPABASE_ANON_KEY = CFG.key || "";
+
+const OWNER_ID = "00000000-0000-0000-0000-000000000001"; // il tuo unico profilo
+const APP_VERSION = "2.3";
+const PHOTO_BUCKET = "progress-photos";
+
+/* ---------- logica livelli (pura) ---------- */
+const XP_BASE=140, XP_STEP=6, MILESTONE=20, COMBO_BONUS=30, SKIP_PENALTY=70;
+const WEEKLY_BONUS=40, WEEKLY_TARGET=3;
+const xpNeeded = lvl => XP_BASE + lvl*XP_STEP;
+function rankForLevel(l){ return l>=80?'S':l>=55?'A':l>=35?'B':l>=20?'C':l>=10?'D':'E'; }
+function applyXp(s, delta){
+  const start=s.level; let lvl=s.level, xp=s.currentXp+delta;
+  while(xp>=xpNeeded(lvl)){ xp-=xpNeeded(lvl); lvl++; }
+  while(xp<0 && lvl>1){ lvl--; xp+=xpNeeded(lvl); }
+  if(xp<0) xp=0;
+  const newMax=Math.max(s.maxLevelReached,lvl);
+  const prevM=Math.floor(s.maxLevelReached/MILESTONE)*MILESTONE;
+  const currM=Math.floor(newMax/MILESTONE)*MILESTONE;
+  const newMilestone=(currM>prevM && currM>=MILESTONE)?currM:null;
+  return {level:lvl,currentXp:xp,maxLevelReached:newMax,rank:rankForLevel(lvl),newMilestone};
+}
+
+/* ---------- categorie ---------- */
+const CAT={
+  sport:{c:'#4FE0FF',ic:'⚔'}, cultura:{c:'#B57BFF',ic:'▤'},
+  corsi:{c:'#FFC663',ic:'↗'}, meditazione:{c:'#4DFFA6',ic:'◈'}
+};
+
+/* ============================================================
+   QUEST SPECIALI — catalogo sfide (una scelta definitiva per soglia)
+   Metriche cumulative misurate dall'app (target = quante IN PIÙ da ora):
+     quests_total  = quest completate (righe quest_logs)
+     perfect_days  = giornate perfette / combo (xp_events reason='combo')
+     trainings     = giorni di allenamento distinti (calendario ∪ pesi)
+     books         = libri finiti
+     active_days   = giornate con almeno una quest
+   ============================================================ */
+const CHALLENGES = {
+  20:{ intro:'Il Sistema apre il Primo Cancello. Un solo sigillo può essere inciso.', options:[
+    {id:'a',diff:'facile',   xp:60,  metric:'perfect_days', target:3,
+      title:'Il Rituale delle Tre Albe', desc:'Colleziona 3 giornate perfette (tutte le quest completate). Ogni alba conquistata incide una runa sull’anima.'},
+    {id:'b',diff:'media',    xp:100, metric:'quests_total', target:25,
+      title:'Il Divoratore di Quest', desc:'Un varco si apre solo per chi non si ferma: completa 25 quest, di qualsiasi tipo. Il conteggio parte adesso.'},
+    {id:'c',diff:'difficile',xp:150, metric:'trainings',    target:8,
+      title:'La Forgia di Ferro', desc:'Il corpo è la prima arma: registra 8 allenamenti. Solo il ferro tempra il Cacciatore.'} ]},
+  40:{ intro:'La Soglia del Monarca ti misura. Scegli con quale prova mostrarti degno.', options:[
+    {id:'a',diff:'facile',   xp:100, metric:'books',        target:2,
+      title:'Il Custode dei Tomi', desc:'La conoscenza è mana: finisci 2 libri. Ogni volume chiuso è un incantesimo appreso.'},
+    {id:'b',diff:'media',    xp:160, metric:'active_days',  target:20,
+      title:'La Danza delle Venti Lune', desc:'Sii presente (almeno una quest) in 20 giornate. La costanza spezza ogni dungeon.'},
+    {id:'c',diff:'difficile',xp:240, metric:'perfect_days', target:10,
+      title:'Il Cuore Impeccabile', desc:'Colleziona 10 giornate perfette. Solo chi non lascia nulla di incompiuto attraversa questa soglia.'} ]},
+  60:{ intro:'L’Ombra si desta e reclama una prova all’altezza del suo nome.', options:[
+    {id:'a',diff:'facile',   xp:150, metric:'quests_total', target:60,
+      title:'Il Pellegrinaggio dei Cento Passi', desc:'Completa 60 quest. Ogni passo è un frammento di potere strappato al vuoto.'},
+    {id:'b',diff:'media',    xp:240, metric:'trainings',    target:20,
+      title:'L’Arsenale del Titano', desc:'Registra 20 allenamenti. Il Titano non nasce: si costruisce, un peso alla volta.'},
+    {id:'c',diff:'difficile',xp:350, metric:'books',        target:3,
+      title:'La Trilogia Proibita', desc:'Finisci 3 libri e leggi ciò che pochi osano. La biblioteca proibita si aprirà.'} ]},
+  80:{ intro:'Il Trono del Sovrano attende. Nessuna soglia oltre questa: dimostra chi sei.', options:[
+    {id:'a',diff:'facile',   xp:220, metric:'perfect_days', target:20,
+      title:'Il Voto delle Venti Aurore', desc:'Colleziona 20 giornate perfette. Il Sovrano non conosce giorni a metà.'},
+    {id:'b',diff:'media',    xp:340, metric:'active_days',  target:50,
+      title:'La Maratona dell’Anima', desc:'Sii attivo in 50 giornate. Una resistenza degna di chi siede sul Trono.'},
+    {id:'c',diff:'difficile',xp:500, metric:'quests_total', target:150,
+      title:'L’Opera Magna', desc:'Completa 150 quest. L’ultima prova: forgia la tua leggenda, quest dopo quest.'} ]}
+};
+const METRIC_LABEL={quests_total:'quest',perfect_days:'giornate perfette',trainings:'allenamenti',books:'libri',active_days:'giornate attive'};
+
+/* ---------- stato + client ---------- */
+let sb=null, profile=null, quests=[], doneToday=new Set(), tab='home';
+let plans=[], exercises=[], lastWeights={}, planIdx=0, wLoaded=false;
+let overrides={}, events={}, calMonth=null, cLoaded=false, ferieCount=0;
+let books=[], libLoaded=false;
+let photos={}, uploadLevel=null;
+let weekTrained=0, weeklyBonusJustGiven=false;
+let allQuests=[], manageLoaded=false, editingQuestId=null;
+let special={}, metricNow={};
+
+/* ============================================================
+   TURNARIO — calcolo automatico (ciclo di 4 giorni, sezioni B1..B8)
+   Ancoraggio verificato: 1 nov 2026 = B2, primo giorno (diurno).
+   Fasi: 0 diurno 8-20 | 1 notte 20-8 | 2 smontante | 3 riposo
+   Quando la sezione è B3 (la tua) → salto turno: fasi 0 e 1 libere.
+   ============================================================ */
+const MY_SECTION = 3;
+const ANCHOR = Date.UTC(2026,10,1);   // 1 novembre 2026
+const ANCHOR_B = 2;                   // quel giorno era B2
+const DAYMS = 86400000;
+
+function shiftFor(dateStr){
+  const [y,m,d] = dateStr.split('-').map(Number);
+  const idx = Math.round((Date.UTC(y,m-1,d) - ANCHOR)/DAYMS);
+  const phase = ((idx % 4) + 4) % 4;
+  const cycle = Math.floor((idx - phase) / 4);
+  const bNum  = ((ANCHOR_B - 1 + cycle) % 8 + 8) % 8 + 1;
+  const salto = (bNum === MY_SECTION);
+  let kind, label, icon;
+  if(salto && phase < 2){ kind='salto'; label='B'+bNum; icon='⌂'; }
+  else if(phase===0){ kind='diurno';     label='B'+bNum; icon='☀'; }
+  else if(phase===1){ kind='notte';      label='B'+bNum; icon='☾'; }
+  else if(phase===2){ kind='smontante';  label='';       icon=''; }
+  else              { kind='riposo';     label='';       icon=''; }
+  return {kind,label,icon,bNum,phase,salto};
+}
+const SHIFT_COLOR = {
+  diurno:'#FFC663', notte:'#5B9BFF', salto:'#4DFFA6',
+  smontante:'transparent', riposo:'transparent',
+  ferie:'#B57BFF', richiamo:'#FF9F43'
+};
+const iso = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const localDate = tz => new Intl.DateTimeFormat('en-CA',{timeZone:tz||'Europe/Rome'}).format(new Date());
+const $ = s => document.querySelector(s);
+const esc = s => (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const MESI_ABBR=['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+const fmtBookDate = d => { if(!d) return ''; const p=d.split('-'); return (MESI_ABBR[(+p[1])-1]||'')+' '+p[0]; };
+
+function toast(txt,color){
+  const t=$('#toast'); t.style.color=color; t.style.border='1px solid '+color;
+  t.style.boxShadow='0 0 16px -2px '+color; t.textContent='[ '+txt+' ]';
+  t.style.display='block'; clearTimeout(toast._t);
+  toast._t=setTimeout(()=>t.style.display='none',1400);
+}
+
+/* ---------- caricamento ---------- */
+async function load(){
+  const [{data:prof},{data:qs}] = await Promise.all([
+    sb.from('profiles').select('*').eq('id',OWNER_ID).single(),
+    sb.from('quests').select('*').eq('is_active',true).eq('frequency','daily').order('sort_order')
+  ]);
+  profile=prof; quests=qs||[];
+  const today=localDate(profile?.timezone);
+  const {data:logs}=await sb.from('quest_logs').select('quest_id').eq('user_id',OWNER_ID).eq('log_date',today);
+  doneToday=new Set((logs||[]).map(l=>l.quest_id));
+  await loadBooks();
+  await loadPhotos();
+  await checkDailyPenalty(today);
+  await loadWeeklyTraining(today);
+  await checkWeeklyBonus(today);
+  await loadSpecial();
+  await checkSpecialQuests();
+  render();
+  if($('#special').style.display!=='grid') welcomeCheck();   // benvenuto (non copre altri avvisi)
+}
+
+/* ---------- QUEST SPECIALI: caricamento, misurazione, completamento ---------- */
+async function loadSpecial(){
+  const {data}=await sb.from('special_quests').select('*').eq('user_id',OWNER_ID);
+  special={}; (data||[]).forEach(r=>special[r.threshold]=r);
+}
+async function measureMetrics(){
+  const [ql, ce, wl, cb, bk] = await Promise.all([
+    sb.from('quest_logs').select('log_date').eq('user_id',OWNER_ID),
+    sb.from('calendar_events').select('starts_at').eq('user_id',OWNER_ID),
+    sb.from('workout_logs').select('log_date').eq('user_id',OWNER_ID),
+    sb.from('xp_events').select('id').eq('user_id',OWNER_ID).eq('reason','combo'),
+    sb.from('books').select('status').eq('user_id',OWNER_ID)
+  ]);
+  const qlogs=ql.data||[];
+  const trainDays=new Set();
+  (ce.data||[]).forEach(e=>{ const d=(e.starts_at||'').slice(0,10); if(d) trainDays.add(d); });
+  (wl.data||[]).forEach(l=>{ if(l.log_date) trainDays.add(l.log_date); });
+  metricNow={
+    quests_total: qlogs.length,
+    active_days: new Set(qlogs.map(l=>l.log_date)).size,
+    perfect_days: (cb.data||[]).length,
+    trainings: trainDays.size,
+    books: (bk.data||[]).filter(b=>b.status==='finished').length
+  };
+  return metricNow;
+}
+async function checkSpecialQuests(){
+  const active=Object.values(special).filter(s=>s.status==='active');
+  if(!active.length) return;
+  const met=await measureMetrics();
+  for(const s of active){
+    const cur=met[s.metric]??0;
+    if(cur>=s.goal){
+      await sb.from('special_quests').update({status:'completed',completed_at:new Date().toISOString()}).eq('id',s.id);
+      const {updated}=await commitXp(s.xp_reward,'special',s.id,profile); profile=updated;
+      s.status='completed'; s.completed_at=new Date().toISOString();
+      specialCompletedModal(s);
+    }
+  }
+}
+function offerSpecial(threshold){
+  if(!CHALLENGES[threshold]) return;   // oltre 80 nessun catalogo
+  if(special[threshold]) return;       // già scelta (definitiva)
+  specialChoiceModal(threshold);
+}
+async function acceptChallenge(threshold, cid){
+  const cat=CHALLENGES[threshold]; if(!cat) return;
+  const ch=cat.options.find(o=>o.id===cid); if(!ch) return;
+  if(special[threshold]){ $('#special').style.display='none'; return; }  // già scelta: definitiva
+  const met=await measureMetrics();
+  const baseline=met[ch.metric]??0;
+  const goal=baseline+ch.target;       // metriche cumulative → obiettivo relativo
+  const row={user_id:OWNER_ID, threshold, challenge_id:ch.id, title:ch.title, description:ch.desc,
+    metric:ch.metric, goal, baseline, xp_reward:ch.xp, status:'active', accepted_at:new Date().toISOString()};
+  const {data,error}=await sb.from('special_quests').insert(row).select();
+  if(error){ toast('Errore, riprova',getVar('--red')); return; }
+  special[threshold]=(data&&data[0])||row;
+  $('#special').style.display='none';
+  toast('SFIDA ACCETTATA',getVar('--violet'));
+  render();
+}
+function specialChoiceModal(threshold){
+  const cat=CHALLENGES[threshold]; if(!cat) return;
+  const dcol={facile:'--green',media:'--gold',difficile:'--red'};
+  const opts=cat.options.map(o=>`
+    <button data-action="accept-ch" data-th="${threshold}" data-cid="${o.id}"
+      style="display:block;width:100%;text-align:left;padding:13px;margin-bottom:10px;cursor:pointer;
+      border:1px solid color-mix(in srgb,var(${dcol[o.diff]}) 45%,transparent);background:color-mix(in srgb,var(${dcol[o.diff]}) 7%,transparent)">
+      <div class="mono" style="font-size:9px;letter-spacing:1px;color:var(${dcol[o.diff]})">${o.diff.toUpperCase()} · +${o.xp} XP</div>
+      <div style="font-family:var(--disp);font-size:17px;font-weight:700;color:var(--glow);margin:4px 0">${esc(o.title)}</div>
+      <div class="mono" style="font-size:11px;color:var(--text);line-height:1.5">${esc(o.desc)}</div></button>`).join('');
+  const box=`<div class="box"><div style="padding:10px 14px;border-bottom:1px solid color-mix(in srgb,var(--violet) 35%,transparent);display:flex;justify-content:space-between;align-items:center">
+    <span class="mono" style="font-size:11px;letter-spacing:2px;color:var(--violet)">⚠ QUEST SPECIALE · LIVELLO ${threshold}</span>
+    <button data-action="close-special" style="background:none;border:none;color:var(--dim);font-size:16px">✕</button></div>
+    <div style="padding:18px;max-height:72vh;overflow-y:auto">
+      <div class="mono" style="font-size:11px;color:var(--dim);line-height:1.6;margin-bottom:16px">${esc(cat.intro)}<br><span style="color:var(--gold)">Scegli UNA sfida — la scelta è definitiva.</span></div>
+      ${opts}</div></div>`;
+  const m=$('#special'); m.innerHTML=box; m.style.display='grid';
+}
+function specialCompletedModal(s){
+  sfxCombo();
+  const box=`<div class="box" style="border-color:var(--green);box-shadow:0 0 40px -6px var(--green),inset 0 0 40px -20px var(--green)">
+    <div style="padding:10px 14px;border-bottom:1px solid color-mix(in srgb,var(--green) 35%,transparent);display:flex;justify-content:space-between;align-items:center">
+      <span class="mono" style="font-size:11px;letter-spacing:2px;color:var(--green)">✔ SFIDA COMPLETATA</span>
+      <button data-action="close-special" style="background:none;border:none;color:var(--dim);font-size:16px">✕</button></div>
+    <div style="padding:22px;text-align:center">
+      <div style="font-family:var(--disp);font-size:24px;font-weight:800;color:var(--glow);text-shadow:0 0 20px var(--green);line-height:1.1;margin-bottom:12px">${esc(s.title)}</div>
+      <div style="font-family:var(--num);font-size:30px;font-weight:800;color:var(--green);text-shadow:0 0 18px var(--green);margin-bottom:14px">+${s.xp_reward} XP</div>
+      <div class="mono" style="font-size:12px;color:var(--text);line-height:1.6;margin-bottom:20px">Hai superato la prova della soglia ${s.threshold}.<br>Il Sistema riconosce la tua ascesa.</div>
+      <button class="btnfull" data-action="close-special" style="background:linear-gradient(90deg,var(--green),var(--glow))">RISCUOTI</button></div></div>`;
+  const m=$('#special'); m.innerHTML=box; m.style.display='grid';
+}
+
+/* ---------- quest settimanale: 3 allenamenti (lun-dom) ---------- */
+function weekBounds(todayStr){
+  const [y,m,d]=todayStr.split('-').map(Number);
+  const dow=(new Date(y,m-1,d).getDay()+6)%7;          // lunedì = 0
+  const mon=new Date(y,m-1,d-dow), sun=new Date(y,m-1,d-dow+6);
+  return {monday:iso(mon), sunday:iso(sun)};
+}
+async function loadWeeklyTraining(today){
+  const {monday,sunday}=weekBounds(today);
+  const days=new Set();
+  // 1) giorni segnati nel calendario (allenamenti)
+  const {data:cal}=await sb.from('calendar_events').select('starts_at').eq('user_id',OWNER_ID);
+  (cal||[]).forEach(e=>{ const d=(e.starts_at||'').slice(0,10); if(d>=monday && d<=sunday) days.add(d); });
+  // 2) giorni in cui ho salvato un peso nelle schede
+  const {data:wl}=await sb.from('workout_logs').select('log_date').eq('user_id',OWNER_ID)
+    .gte('log_date',monday).lte('log_date',sunday);
+  (wl||[]).forEach(l=>{ if(l.log_date) days.add(l.log_date); });
+  weekTrained=days.size;
+}
+async function checkWeeklyBonus(today){
+  weeklyBonusJustGiven=false;
+  const {monday}=weekBounds(today);
+  if(weekTrained>=WEEKLY_TARGET && profile.last_weekly_bonus_week!==monday){
+    const {updated}=await commitXp(WEEKLY_BONUS,'weekly_bonus',null,profile);
+    await sb.from('profiles').update({last_weekly_bonus_week:monday}).eq('id',OWNER_ID);
+    profile={...updated,last_weekly_bonus_week:monday};
+    weeklyBonusJustGiven=true;
+    toast(WEEKLY_TARGET+' ALLENAMENTI · +'+WEEKLY_BONUS+' XP',getVar('--gold'));
+  }
+}
+async function refreshWeekly(){
+  const today=localDate(profile.timezone);
+  await loadWeeklyTraining(today);
+  await checkWeeklyBonus(today);
+  await checkSpecialQuests();
+}
+
+/* ---------- penalità automatica: controllo giornaliero all'avvio ---------- */
+async function checkDailyPenalty(today){
+  if(profile.last_penalty_check===today) return;           // già controllato oggi
+  if(!profile.last_penalty_check){                          // primissimo avvio con questa funzione: non punire a sorpresa
+    await sb.from('profiles').update({last_penalty_check:today}).eq('id',OWNER_ID);
+    profile.last_penalty_check=today;
+    return;
+  }
+  const d=new Date(today); d.setDate(d.getDate()-1);
+  const yesterday=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const {data:ylogs}=await sb.from('quest_logs').select('quest_id').eq('user_id',OWNER_ID).eq('log_date',yesterday);
+  const skippedAllDay = !ylogs || ylogs.length===0;
+  if(skippedAllDay){
+    const {updated}=await commitXp(-SKIP_PENALTY,'penalty_auto',null,profile);
+    await sb.from('profiles').update({streak_count:0,last_penalty_check:today}).eq('id',OWNER_ID);
+    profile={...updated,streak_count:0,last_penalty_check:today};
+    penaltyModal(yesterday);
+  }else{
+    await sb.from('profiles').update({last_penalty_check:today}).eq('id',OWNER_ID);
+    profile.last_penalty_check=today;
+  }
+}
+function penaltyModal(dayStr){
+  const box=`<div class="box"><div style="padding:10px 14px;border-bottom:1px solid rgba(255,84,104,.35);display:flex;justify-content:space-between;align-items:center">
+    <span class="mono" style="font-size:11px;letter-spacing:2px;color:var(--red)">⚠ AVVISO DEL SISTEMA</span>
+    <button data-action="close-special" style="background:none;border:none;color:var(--dim);font-size:16px">✕</button></div>
+    <div style="padding:22px;text-align:center">
+      <div style="font-family:var(--num);font-size:15px;letter-spacing:3px;color:var(--red);margin-bottom:6px">GIORNATA SALTATA</div>
+      <div class="mono" style="font-size:12px;color:var(--text);line-height:1.6;margin-bottom:20px">
+        Il ${esc(dayStr.split('-').reverse().join('/'))} non hai completato nessuna quest.<br>
+        Penalità applicata: <span style="color:var(--red)">−${SKIP_PENALTY} XP</span><br>Streak azzerata.</div>
+      <button class="btnfull" data-action="close-special">HO CAPITO</button></div></div>`;
+  const m=$('#special'); m.innerHTML=box; m.style.display='grid';
+}
+
+/* ---------- libreria: caricamento libri ---------- */
+async function loadBooks(){
+  const {data}=await sb.from('books').select('*').eq('user_id',OWNER_ID)
+    .order('created_at',{ascending:false});
+  books=data||[]; libLoaded=true;
+}
+
+/* ---------- foto milestone: caricamento ---------- */
+async function loadPhotos(){
+  const {data}=await sb.from('progress_photos').select('*').eq('user_id',OWNER_ID);
+  photos={};
+  (data||[]).forEach(p=>{
+    const {data:pub}=sb.storage.from(PHOTO_BUCKET).getPublicUrl(p.path);
+    const bust = p.created_at ? new Date(p.created_at).getTime() : 0;
+    photos[p.level]={ path:p.path, url:pub.publicUrl+'?t='+bust };
+  });
+}
+function pickPhoto(level){
+  uploadLevel=level;
+  const inp=document.getElementById('photoInput');
+  if(inp) inp.click();
+}
+async function uploadPhoto(file, level){
+  if(!file) return;
+  toast('Carico la foto…',getVar('--sys'));
+  const path=OWNER_ID+'/lvl-'+level+'.jpg';
+  const {error:upErr}=await sb.storage.from(PHOTO_BUCKET)
+    .upload(path, file, {upsert:true, contentType:file.type||'image/jpeg'});
+  if(upErr){ toast('Errore caricamento',getVar('--red')); return; }
+  const {error:dbErr}=await sb.from('progress_photos')
+    .upsert({user_id:OWNER_ID, level, path, created_at:new Date().toISOString()},{onConflict:'user_id,level'});
+  if(dbErr){ toast('Errore salvataggio',getVar('--red')); return; }
+  await loadPhotos();
+  $('#special').style.display='none';
+  toast('Foto salvata',getVar('--green'));
+  render();
+}
+async function delPhoto(level){
+  if(!confirm('Vuoi eliminare questa foto milestone?')) return;
+  const p=photos[level];
+  if(p) await sb.storage.from(PHOTO_BUCKET).remove([p.path]);
+  await sb.from('progress_photos').delete().eq('user_id',OWNER_ID).eq('level',level);
+  await loadPhotos();
+  $('#special').style.display='none';
+  toast('Foto eliminata',getVar('--dim'));
+  render();
+}
+function photoModal(level){
+  const p=photos[level];
+  const img = p ? `<img src="${p.url}" alt="Milestone Lv.${level}"
+      style="width:100%;display:block;max-height:58vh;object-fit:contain;background:#05070F">` : '';
+  const box=`<div class="box"><div style="padding:10px 14px;border-bottom:1px solid color-mix(in srgb,var(--violet) 35%,transparent);display:flex;justify-content:space-between;align-items:center">
+    <span class="mono" style="font-size:11px;letter-spacing:2px;color:var(--violet)">◈ MILESTONE · LIVELLO ${level}</span>
+    <button data-action="close-special" style="background:none;border:none;color:var(--dim);font-size:16px">✕</button></div>
+    ${img}
+    <div style="padding:16px;display:flex;gap:8px">
+      <button class="mono" data-action="repphoto" data-level="${level}"
+        style="flex:1;padding:11px;font-size:11px;letter-spacing:1px;color:var(--sys);border:1px solid color-mix(in srgb,var(--sys) 45%,transparent);background:color-mix(in srgb,var(--sys) 7%,transparent)">SOSTITUISCI</button>
+      <button class="mono" data-action="delphoto" data-level="${level}"
+        style="padding:11px 16px;font-size:11px;letter-spacing:1px;color:var(--red);border:1px solid rgba(255,84,104,.4);background:rgba(255,84,104,.05)">ELIMINA</button>
+    </div></div>`;
+  const m=$('#special'); m.innerHTML=box; m.style.display='grid';
+}
+
+/* ---------- scrittura XP: ledger + cache profilo ---------- */
+async function commitXp(delta,reason,refId,base){
+  const res=applyXp({level:base.level,currentXp:base.current_xp,maxLevelReached:base.max_level_reached},delta);
+  const updated={...base,level:res.level,current_xp:res.currentXp,max_level_reached:res.maxLevelReached,rank:res.rank};
+  await sb.from('xp_events').insert({user_id:OWNER_ID,delta,reason,ref_id:refId||null});
+  await sb.from('profiles').update({level:updated.level,current_xp:updated.current_xp,
+    max_level_reached:updated.max_level_reached,rank:updated.rank}).eq('id',OWNER_ID);
+  return {updated,res};
+}
+async function bumpStreak(base,today){
+  const d=new Date(today); d.setDate(d.getDate()-1); const y=d.toISOString().slice(0,10);
+  let next = base.last_active_date===today ? base.streak_count
+           : base.last_active_date===y ? base.streak_count+1 : 1;
+  await sb.from('profiles').update({streak_count:next,last_active_date:today}).eq('id',OWNER_ID);
+  base.streak_count=next; base.last_active_date=today;
+}
+
+/* ---------- completa quest ---------- */
+async function completeQuest(id){
+  if(doneToday.has(id)) return;
+  const q=quests.find(x=>x.id===id); if(!q) return;
+  const today=localDate(profile.timezone);
+  const prevLvl=profile.level;
+  doneToday.add(id); sfxQuest(); render();                      // ottimistico
+  const {error}=await sb.from('quest_logs').insert({user_id:OWNER_ID,quest_id:id,log_date:today,xp_awarded:q.xp_value});
+  if(error){ doneToday.delete(id); toast('Errore, riprova',getVar('--red')); render(); return; }
+  let {updated,res}=await commitXp(q.xp_value,'quest',id,profile); profile=updated;
+  toast('+'+q.xp_value+' XP · '+q.category, CAT[q.category].c);
+  if(quests.every(x=>doneToday.has(x.id))){
+    const combo=await commitXp(COMBO_BONUS,'combo',null,profile); profile=combo.updated;
+    setTimeout(()=>{ toast('COMBO GIORNALIERA +'+COMBO_BONUS+' XP',getVar('--gold')); sfxCombo(); },750);
+    await bumpStreak(profile,today);
+    if(combo.res.newMilestone) res={...res,newMilestone:combo.res.newMilestone};
+  }
+  await checkSpecialQuests();
+  const leveled=profile.level>prevLvl;
+  if(res.newMilestone) offerSpecial(res.newMilestone);
+  else if(leveled) levelUpModal(profile.level);
+  render();
+}
+async function skipDay(){
+  sfxBad();
+  const {updated}=await commitXp(-SKIP_PENALTY,'penalty',null,profile);
+  await sb.from('profiles').update({streak_count:0}).eq('id',OWNER_ID);
+  profile={...updated,streak_count:0}; toast('PENALITÀ −'+SKIP_PENALTY+' XP',getVar('--red')); render();
+}
+const getVar=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+/* ============================================================
+   AUDIO v2.0 — musica di sottofondo + effetti del Sistema
+   La musica viene letta dal file `musica.mp3` nella stessa
+   cartella dell'app (lo fornisce l'utente). Gli effetti sono
+   generati dal codice (Web Audio), nessun file esterno.
+   iOS blocca l'avvio automatico: serve sempre un tocco.
+   ============================================================ */
+let bgm=null, bgmOk=true, musicPref=false;
+try{ musicPref = localStorage.getItem('rv_music')==='on'; }catch(e){}
+(function initMusic(){
+  try{
+    bgm=new Audio('musica.mp3'); bgm.loop=true; bgm.volume=0.35; bgm.preload='auto';
+    bgm.addEventListener('error',()=>{ bgmOk=false; });
+  }catch(e){ bgmOk=false; }
+})();
+async function toggleMusic(){
+  if(!bgmOk || !bgm){ toast('musica.mp3 non trovato nella cartella',getVar('--gold')); return; }
+  if(bgm.paused){
+    try{
+      await bgm.play(); musicPref=true;
+      try{ localStorage.setItem('rv_music','on'); }catch(e){}
+      toast('MUSICA ATTIVA',getVar('--glow'));
+    }catch(e){ toast('Riprova con un tocco',getVar('--gold')); }
+  }else{
+    bgm.pause(); musicPref=false;
+    try{ localStorage.setItem('rv_music','off'); }catch(e){}
+    toast('MUSICA SPENTA',getVar('--dim'));
+  }
+  render();
+}
+/* se la musica era attiva, riparte al primo tocco (regola iOS) */
+document.addEventListener('pointerdown',()=>{
+  if(musicPref && bgmOk && bgm && bgm.paused) bgm.play().catch(()=>{});
+});
+
+/* apre la playlist Spotify di Fabrizio; su iPhone salta nell'app */
+const SPOTIFY_PLAYLIST_ID = '7cZaTLHg1i4FItQewSBW24';
+function openSpotify(){
+  window.open('https://open.spotify.com/playlist/'+SPOTIFY_PLAYLIST_ID, '_blank');
+  toast('APRO LA COLONNA SONORA','#1DB954');
+}
+
+let actx=null;
+function ac(){
+  try{
+    if(!actx) actx=new (window.AudioContext||window.webkitAudioContext)();
+    if(actx.state==='suspended') actx.resume();
+    return actx;
+  }catch(e){ return null; }
+}
+function tone(freq,start,dur,type,vol){
+  const c=ac(); if(!c) return;
+  try{
+    const o=c.createOscillator(), g=c.createGain(), t=c.currentTime+start;
+    o.type=type||'sine'; o.frequency.value=freq;
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.linearRampToValueAtTime(vol||.16,t+.02);
+    g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+    o.connect(g); g.connect(c.destination); o.start(t); o.stop(t+dur+.05);
+  }catch(e){}
+}
+const sfxQuest=()=>{ tone(880,0,.14,'triangle'); tone(1318,.09,.2,'triangle'); };
+const sfxCombo=()=>{ [659,880,1108,1318].forEach((f,i)=>tone(f,i*.09,.24,'triangle')); };
+const sfxLevel=()=>{ tone(220,0,1,'sine',.14); [440,554,659,880,1108,1318].forEach((f,i)=>tone(f,i*.11,.42,'sawtooth',.09)); };
+const sfxBad  =()=>{ tone(220,0,.3,'sawtooth',.11); tone(155,.18,.55,'sawtooth',.11); };
+
+/* ---------- benvenuto del Sistema (una volta al giorno) ---------- */
+const SHIFT_TXT={diurno:'Turno diurno · 8–20',notte:'Turno di notte · 20–8',
+  smontante:'Smontante',riposo:'Riposo',salto:'Salto turno'};
+const WELCOME_MSG={
+  diurno:'Il turno diurno ti attende. Gestisci le energie: le quest non aspettano.',
+  notte:"Stanotte vegli sulla città. L'Ombra si allena anche al buio.",
+  smontante:"Hai smontato: recupera. Anche il riposo fa parte dell'ascesa.",
+  riposo:'Giorno di riposo: il momento perfetto per completare ogni quest.',
+  salto:'Salto turno: la giornata è interamente tua. Usala da Cacciatore.'};
+function welcomeCheck(){
+  const today=localDate(profile.timezone);
+  let seen=null; try{ seen=localStorage.getItem('rv_welcome'); }catch(e){}
+  if(seen===today) return;
+  try{ localStorage.setItem('rv_welcome',today); }catch(e){}
+  const sh=shiftFor(today);
+  const box=`<div class="box"><div style="padding:10px 14px;border-bottom:1px solid color-mix(in srgb,var(--sys) 35%,transparent);display:flex;justify-content:space-between;align-items:center">
+    <span class="mono" style="font-size:11px;letter-spacing:2px;color:var(--sys)">⚠ NOTIFICA DEL SISTEMA</span>
+    <button data-action="welcome-ok" style="background:none;border:none;color:var(--dim);font-size:16px">✕</button></div>
+    <div style="padding:24px 20px;text-align:center">
+      <div style="font-family:var(--disp);font-size:22px;font-weight:800;color:var(--glow);text-shadow:0 0 16px var(--sys);margin-bottom:6px">Bentornato, ${esc(profile.display_name||'Cacciatore')}</div>
+      <div class="mono" style="font-size:11px;color:var(--gold);letter-spacing:1px;margin-bottom:14px">${sh.icon?sh.icon+' ':''}${SHIFT_TXT[sh.kind]||''}${sh.label?' · '+sh.label:''}</div>
+      <div class="mono" style="font-size:12px;color:var(--text);line-height:1.7;margin-bottom:8px">${WELCOME_MSG[sh.kind]||''}</div>
+      <div class="mono" style="font-size:11px;color:var(--dim);margin-bottom:20px">Quest di oggi: ${quests.length} · Streak: 🔥 ${profile.streak_count}</div>
+      <button class="btnfull" data-action="welcome-ok" style="background:linear-gradient(90deg,var(--sys),var(--glow))">ACCETTA</button>
+    </div></div>`;
+  const m=$('#special'); m.innerHTML=box; m.style.display='grid';
+}
+
+/* ---------- popup LEVEL UP ---------- */
+function levelUpModal(lvl){
+  sfxLevel();
+  const box=`<div class="box" style="border-color:var(--glow);box-shadow:0 0 60px -8px var(--glow),inset 0 0 50px -20px var(--sys)">
+    <div style="padding:32px 22px;text-align:center">
+      <div class="mono" style="font-size:11px;letter-spacing:4px;color:var(--sys);margin-bottom:12px">⚠ NOTIFICA DEL SISTEMA</div>
+      <div class="lvltxt">LEVEL UP</div>
+      <div style="font-family:var(--num);font-size:62px;font-weight:800;color:var(--glow);text-shadow:0 0 28px var(--glow);margin:6px 0 2px">${lvl}</div>
+      <div class="mono" style="font-size:11px;color:var(--violet);letter-spacing:2px;margin-bottom:22px">GRADO ${rankForLevel(lvl)} · CACCIATORE</div>
+      <button class="btnfull" data-action="close-special" style="background:linear-gradient(90deg,var(--sys),var(--glow))">CONTINUA L'ASCESA</button>
+    </div></div>`;
+  const m=$('#special'); m.innerHTML=box; m.style.display='grid';
+}
+
+/* ---------- GESTIONE QUEST (aggiungi/modifica/attiva/riordina) ---------- */
+async function loadAllQuests(){
+  const {data}=await sb.from('quests').select('*').eq('frequency','daily').order('sort_order');
+  allQuests=data||[]; manageLoaded=true;
+}
+function openQuestForm(id){
+  editingQuestId=id||null;
+  const q = id ? allQuests.find(x=>x.id===id) : null;
+  const cats=Object.keys(CAT);
+  const box=`<div class="box"><div style="padding:10px 14px;border-bottom:1px solid color-mix(in srgb,var(--violet) 35%,transparent);display:flex;justify-content:space-between;align-items:center">
+    <span class="mono" style="font-size:11px;letter-spacing:2px;color:var(--violet)">${id?'✎ MODIFICA QUEST':'＋ NUOVA QUEST'}</span>
+    <button data-action="close-special" style="background:none;border:none;color:var(--dim);font-size:16px">✕</button></div>
+    <div style="padding:18px;max-height:64vh;overflow-y:auto">
+      <div class="mono" style="font-size:10px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">NOME</div>
+      <input data-q="title" value="${esc(q?.title||'')}" placeholder="Es. Allenamento"
+        style="width:100%;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--glow);font-size:14px;padding:10px;outline:none;margin-bottom:14px">
+      <div class="mono" style="font-size:10px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">SOTTOTITOLO</div>
+      <input data-q="subtitle" value="${esc(q?.subtitle||'')}" placeholder="Facoltativo"
+        style="width:100%;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--glow);font-size:14px;padding:10px;outline:none;margin-bottom:14px">
+      <div class="mono" style="font-size:10px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">CATEGORIA</div>
+      <select data-q="category" style="width:100%;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--glow);font-size:14px;padding:10px;outline:none;margin-bottom:14px">
+        ${cats.map(c=>`<option value="${c}" ${q?.category===c?'selected':''}>${c.charAt(0).toUpperCase()+c.slice(1)}</option>`).join('')}
+      </select>
+      <div class="mono" style="font-size:10px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">XP (10–50)</div>
+      <input data-q="xp" type="number" min="10" max="50" value="${q?.xp_value??20}"
+        style="width:100%;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--glow);font-size:14px;padding:10px;outline:none;margin-bottom:20px">
+      <button class="btnfull" data-action="save-quest">${id?'SALVA MODIFICHE':'AGGIUNGI QUEST'}</button>
+    </div></div>`;
+  const m=$('#special'); m.innerHTML=box; m.style.display='grid';
+  setTimeout(()=>{ const i=$('#special input[data-q="title"]'); if(i) i.focus(); },60);
+}
+async function saveQuestForm(){
+  const ti=$('#special input[data-q="title"]'), si=$('#special input[data-q="subtitle"]');
+  const ci=$('#special select[data-q="category"]'), xi=$('#special input[data-q="xp"]');
+  const title=(ti?ti.value:'').trim(), subtitle=(si?si.value:'').trim();
+  const category=ci?ci.value:'sport'; let xp=parseInt(xi?xi.value:'20',10);
+  if(!title){ toast('Scrivi il nome della quest',getVar('--red')); return; }
+  if(isNaN(xp)) xp=20; xp=Math.max(10,Math.min(50,xp));
+  if(editingQuestId){
+    const {error}=await sb.from('quests').update({title,subtitle:subtitle||null,category,xp_value:xp}).eq('id',editingQuestId);
+    if(error){ toast('Errore salvataggio',getVar('--red')); return; }
+    toast('Quest aggiornata',getVar('--green'));
+  }else{
+    const maxOrder=allQuests.reduce((m,q)=>Math.max(m,q.sort_order||0),0);
+    const {error}=await sb.from('quests').insert({title,subtitle:subtitle||null,category,xp_value:xp,
+      frequency:'daily',is_active:true,sort_order:maxOrder+1});
+    if(error){ toast('Errore salvataggio',getVar('--red')); return; }
+    toast('Quest aggiunta',getVar('--green'));
+  }
+  $('#special').style.display='none';
+  await loadAllQuests();
+  const {data:qs}=await sb.from('quests').select('*').eq('is_active',true).eq('frequency','daily').order('sort_order');
+  quests=qs||[];
+  render();
+}
+async function toggleQuestActive(id){
+  const q=allQuests.find(x=>x.id===id); if(!q) return;
+  const {error}=await sb.from('quests').update({is_active:!q.is_active}).eq('id',id);
+  if(error){ toast('Errore, riprova',getVar('--red')); return; }
+  await loadAllQuests();
+  const {data:qs}=await sb.from('quests').select('*').eq('is_active',true).eq('frequency','daily').order('sort_order');
+  quests=qs||[];
+  toast(q.is_active?'Quest disattivata':'Quest riattivata',getVar('--dim'));
+  render();
+}
+async function moveQuest(id,dir){
+  const idx=allQuests.findIndex(x=>x.id===id); if(idx<0) return;
+  const swapIdx=idx+dir; if(swapIdx<0||swapIdx>=allQuests.length) return;
+  const a=allQuests[idx], b=allQuests[swapIdx];
+  const aOrder=a.sort_order??idx, bOrder=b.sort_order??swapIdx;
+  await Promise.all([
+    sb.from('quests').update({sort_order:bOrder}).eq('id',a.id),
+    sb.from('quests').update({sort_order:aOrder}).eq('id',b.id)
+  ]);
+  await loadAllQuests();
+  const {data:qs}=await sb.from('quests').select('*').eq('is_active',true).eq('frequency','daily').order('sort_order');
+  quests=qs||[];
+  render();
+}
+function viewManageQuests(){
+  if(!manageLoaded){ loadAllQuests().then(render); return `<div class="row mb14">
+      <div><div class="lbl dim">Configurazione</div><div class="hi">Gestisci Quest</div></div></div>
+      <div class="mono" style="font-size:12px;color:var(--dim)">caricamento…</div>`; }
+  const rows=allQuests.map((q,i)=>{
+    const m=CAT[q.category]||CAT.cultura;
+    return `<div class="panel" style="--pg:${q.is_active?m.c:'var(--dim)'};padding:12px;opacity:${q.is_active?1:.55}">
+      <div class="row" style="align-items:flex-start">
+        <div style="flex:1;min-width:0">
+          <b style="font-family:var(--disp);font-size:15px">${esc(q.title)}</b>
+          <div class="mono" style="font-size:10px;color:var(--dim);margin-top:2px">${esc(q.subtitle||'')}</div>
+          <div class="mono" style="font-size:10px;color:${m.c};margin-top:4px">${q.category} · +${q.xp_value} XP${q.is_active?'':' · DISATTIVA'}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <button data-action="qup" data-id="${q.id}" style="background:none;border:1px solid var(--line);color:var(--dim);width:26px;height:26px;font-size:11px" ${i===0?'disabled':''}>▲</button>
+          <button data-action="qdown" data-id="${q.id}" style="background:none;border:1px solid var(--line);color:var(--dim);width:26px;height:26px;font-size:11px" ${i===allQuests.length-1?'disabled':''}>▼</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="mono" data-action="qedit" data-id="${q.id}" style="flex:1;padding:8px;font-size:11px;letter-spacing:1px;color:var(--sys);border:1px solid color-mix(in srgb,var(--sys) 45%,transparent);background:color-mix(in srgb,var(--sys) 7%,transparent)">✎ MODIFICA</button>
+        <button class="mono" data-action="qtoggle" data-id="${q.id}" style="flex:1;padding:8px;font-size:11px;letter-spacing:1px;color:${q.is_active?'var(--red)':'var(--green)'};border:1px solid ${q.is_active?'rgba(255,84,104,.4)':'color-mix(in srgb,var(--green) 45%,transparent)'};background:transparent">${q.is_active?'✕ DISATTIVA':'✔ RIATTIVA'}</button>
+      </div></div>`;
+  }).join('');
+  return `<div class="row mb14">
+      <div><div class="lbl dim">Configurazione</div><div class="hi">Gestisci Quest</div></div>
+      <button class="mono" data-action="backtome" style="padding:8px 12px;color:var(--sys);border:1px solid var(--line);background:transparent;font-size:11px">‹ Profilo</button></div>
+    <button class="mono" data-action="qnew" style="width:100%;padding:12px;margin-bottom:18px;font-size:12px;letter-spacing:2px;color:var(--sys);border:1px dashed var(--sys);background:rgba(67,180,255,.05)">＋ NUOVA QUEST</button>
+    <div class="stack">${rows}</div>`;
+}
+
+/* ---------- rendering ---------- */
+function render(){
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
+  const s=$('#screen');
+  if(tab==='home') s.innerHTML=viewHome();
+  else if(tab==='workout') s.innerHTML=viewWorkout();
+  else if(tab==='cal') s.innerHTML=viewCalendar();
+  else if(tab==='lib') s.innerHTML=viewLibrary();
+  else if(tab==='me') s.innerHTML=viewProfile();
+  else if(tab==='manage') s.innerHTML=viewManageQuests();
+}
+
+function viewHome(){
+  const need=xpNeeded(profile.level), pct=Math.min(100,profile.current_xp/need*100);
+  const done=[...doneToday].filter(id=>quests.some(q=>q.id===id)).length;
+  const readingBook=books.find(b=>b.status==='reading');
+  const qcards=quests.map(q=>{
+    const m=CAT[q.category]||CAT.cultura, isDone=doneToday.has(q.id);
+    let sub=q.subtitle||'';
+    if(readingBook && /pagin|legg/i.test((q.title||'')+' '+(q.subtitle||''))){
+      sub='In lettura: '+readingBook.title;
+    }
+    return `<div class="panel q ${isDone?'done':''}" style="--cat:${m.c};--pg:${m.c}" data-action="quest" data-id="${q.id}">
+      <div class="ic">${m.ic}</div>
+      <div class="t"><b>${esc(q.title)}</b><span>${esc(sub)}</span></div>
+      <div class="xp">+${q.xp_value}</div>
+      <div class="ck">${isDone?'✔':''}</div></div>`;
+  }).join('');
+  const todayS=localDate(profile.timezone), sh=shiftFor(todayS);
+  const shC=(SHIFT_COLOR[sh.kind]&&SHIFT_COLOR[sh.kind]!=='transparent')?SHIFT_COLOR[sh.kind]:'#8FA3C8';
+  const playing=bgmOk&&bgm&&!bgm.paused;
+  return `
+    <div class="row mb14">
+      <div><div class="lbl dim">System · Risveglio</div><div class="hi">Buongiorno, ${esc(profile.display_name||'Cacciatore')}</div></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button data-action="spotify" title="Colonna sonora" style="width:34px;height:34px;padding:0;font-size:15px;line-height:1;
+          color:#1DB954;border:1px solid rgba(29,185,84,.45);background:rgba(29,185,84,.08)">♫</button>
+        <button data-action="music" title="Musica" style="width:34px;height:34px;padding:0;font-size:15px;line-height:1;
+          color:${playing?'var(--glow)':'var(--dim)'};border:1px solid ${playing?'var(--sys)':'var(--line)'};
+          background:${playing?'rgba(67,180,255,.12)':'transparent'};box-shadow:${playing?'0 0 10px -2px var(--sys)':'none'}">${playing?'🔊':'♪'}</button>
+        <div class="mono" style="color:var(--gold)">🔥 ${profile.streak_count}</div>
+      </div>
+    </div>
+    <div class="panel mb16" style="--pg:${shC};padding:10px 14px">
+      <div class="row mono" style="font-size:11px">
+        <span style="letter-spacing:1px;color:${shC}">${sh.icon?sh.icon+' ':''}OGGI · ${(SHIFT_TXT[sh.kind]||'').toUpperCase()}</span>
+        <span style="color:var(--dim)">${sh.label||''}</span>
+      </div>
+    </div>
+    <div class="panel mb16" style="--pg:var(--sys)">
+      <div class="row">
+        <div><div class="lbl dim">Livello</div><div class="lvnum">${profile.level}</div></div>
+        <div style="text-align:right"><div class="lbl" style="color:var(--violet)">Grado</div><div class="rank">${profile.rank}</div></div>
+      </div>
+      <div class="mt8">
+        <div class="row mono" style="font-size:10px;color:var(--dim);margin-bottom:5px"><span>XP</span><span>${profile.current_xp} / ${need}</span></div>
+        <div class="bar"><i style="width:${pct}%"></i></div>
+      </div>
+    </div>
+    <div class="panel mb16" style="--pg:var(--green)">
+      <div class="row mono" style="font-size:10px;margin-bottom:7px">
+        <span style="color:var(--green);letter-spacing:1px">💪 ALLENAMENTI · SETTIMANA</span>
+        <span style="color:${weekTrained>=WEEKLY_TARGET?'var(--green)':'var(--dim)'}">${Math.min(weekTrained,WEEKLY_TARGET)}/${WEEKLY_TARGET}${weekTrained>=WEEKLY_TARGET?' ✓':''}</span></div>
+      <div class="bar"><i style="width:${Math.min(100,weekTrained/WEEKLY_TARGET*100)}%;background:linear-gradient(90deg,var(--green),var(--glow));box-shadow:0 0 12px var(--green)"></i></div>
+    </div>
+    <div class="row" style="margin-bottom:8px"><div class="lbl">Quest Giornaliere</div>
+      <span class="mono" style="font-size:11px;color:${done===quests.length?'var(--green)':'var(--dim)'}">${done}/${quests.length}</span></div>
+    <div class="stack">${qcards}</div>`;
+}
+
+/* ---- SCHEDE ALLENAMENTO (collegate al database) ---- */
+async function loadWorkout(){
+  const [{data:pl},{data:ex}] = await Promise.all([
+    sb.from('workout_plans').select('*').eq('user_id',OWNER_ID).order('sort_order'),
+    sb.from('workout_exercises').select('*').eq('user_id',OWNER_ID).order('sort_order')
+  ]);
+  plans=pl||[]; exercises=ex||[];
+  // ultimo peso registrato per ogni esercizio
+  const {data:logs}=await sb.from('workout_logs').select('exercise_id,weight,log_date')
+    .eq('user_id',OWNER_ID).order('log_date',{ascending:false});
+  lastWeights={};
+  (logs||[]).forEach(l=>{ if(lastWeights[l.exercise_id]===undefined) lastWeights[l.exercise_id]=l.weight; });
+  wLoaded=true; render();
+}
+
+async function saveWeight(exId,btn){
+  const inp=document.querySelector('input[data-ex="'+exId+'"]');
+  const val=parseFloat(inp.value);
+  if(isNaN(val)){ toast('Inserisci un peso',getVar('--red')); return; }
+  const today=localDate(profile.timezone);
+  const {error}=await sb.from('workout_logs')
+    .insert({user_id:OWNER_ID,exercise_id:exId,log_date:today,weight:val});
+  if(error){ toast('Errore salvataggio',getVar('--red')); return; }
+  lastWeights[exId]=val; inp.value='';
+  btn.textContent='✔ OK'; btn.style.color=getVar('--green'); btn.style.borderColor=getVar('--green');
+  await refreshWeekly();
+  if(!weeklyBonusJustGiven) toast(val+' kg salvati',getVar('--green'));
+  setTimeout(()=>render(),900);
+}
+
+function viewWorkout(){
+  if(!wLoaded){ loadWorkout(); return `<div class="lbl dim">Le mie schede</div><div class="hi mb14">Allenamento</div>
+    <div class="mono" style="color:var(--dim);font-size:12px">caricamento…</div>`; }
+  if(!plans.length) return `<div class="lbl dim">Le mie schede</div><div class="hi mb14">Allenamento</div>
+    <div class="panel" style="--pg:var(--gold)"><div class="mono" style="font-size:12px;line-height:1.6">Nessuna scheda trovata.</div></div>`;
+
+  const plan=plans[Math.min(planIdx,plans.length-1)];
+  const tabs=plans.map((p,i)=>`<button class="mono" data-action="plan" data-i="${i}" style="flex:0 0 auto;font-size:11px;letter-spacing:1px;padding:8px 12px;
+    color:${i===planIdx?'var(--glow)':'var(--dim)'};background:${i===planIdx?'rgba(67,180,255,.1)':'transparent'};
+    border:1px solid ${i===planIdx?'var(--sys)':'var(--line)'}">${esc(p.name.split(' · ')[0].toUpperCase())}</button>`).join('');
+
+  const rows=exercises.filter(e=>e.plan_id===plan.id).map(e=>{
+    const last=lastWeights[e.id];
+    return `<div class="panel" style="--pg:var(--sys);padding:12px">
+      <div style="margin-bottom:10px"><b style="font-family:var(--disp);font-size:15px">${esc(e.name)}</b>
+      <div class="mono" style="font-size:10px;color:var(--dim)">${esc(e.scheme||'')}${last!==undefined&&last!==null?' · ultimo: '+last+'kg':''}</div></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="number" inputmode="decimal" data-ex="${e.id}" placeholder="peso"
+          style="flex:1;min-width:0;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--glow);font-size:14px;padding:8px 10px;outline:none">
+        <span class="mono" style="font-size:12px;color:var(--dim)">kg</span>
+        <button class="mono" data-action="savew" data-id="${e.id}" style="padding:8px 14px;color:var(--sys);border:1px solid var(--sys);background:transparent;font-size:11px">SALVA</button>
+      </div></div>`;
+  }).join('');
+
+  return `<div class="lbl dim">Le mie schede</div><div class="hi mb14">Allenamento</div>
+    <div style="display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;padding-bottom:2px">${tabs}</div>
+    <div class="lbl" style="color:var(--sys)">${esc(plan.name)}</div>
+    <div class="stack mt8">${rows}</div>`;
+}
+/* ---- CALENDARIO (turni calcolati + eccezioni dal database) ---- */
+async function loadCal(){
+  const [{data},{data:evs}]=await Promise.all([
+    sb.from('shift_overrides').select('*').eq('user_id',OWNER_ID),
+    sb.from('calendar_events').select('*').eq('user_id',OWNER_ID)
+  ]);
+  overrides={}; (data||[]).forEach(o=>overrides[o.day]=o.kind);
+  events={}; (evs||[]).forEach(e=>{ const d=e.starts_at.slice(0,10); (events[d]=events[d]||[]).push(e); });
+  ferieCount=(data||[]).filter(o=>o.kind==='ferie'&&o.day.startsWith(String(new Date().getFullYear()))).length;
+  cLoaded=true; render();
+}
+async function toggleTraining(day){
+  const ex=(events[day]||[])[0];
+  if(ex){
+    await sb.from('calendar_events').delete().eq('id',ex.id);
+    delete events[day]; toast('Allenamento rimosso',getVar('--dim'));
+  }else{
+    const {data}=await sb.from('calendar_events').insert({user_id:OWNER_ID,title:'Allenamento',
+      type:'allenamento',starts_at:day+'T08:00:00+02:00',all_day:true}).select();
+    events[day]=data||[{}]; toast('Allenamento aggiunto',getVar('--sys'));
+  }
+  await refreshWeekly();
+  $('#special').style.display='none'; render();
+}
+async function setOverride(day,kind){
+  if(kind==='auto'){
+    await sb.from('shift_overrides').delete().eq('user_id',OWNER_ID).eq('day',day);
+    delete overrides[day];
+  }else{
+    await sb.from('shift_overrides').upsert({user_id:OWNER_ID,day,kind},{onConflict:'user_id,day'});
+    overrides[day]=kind;
+  }
+  ferieCount=Object.entries(overrides).filter(([d,k])=>k==='ferie'&&d.startsWith(String(new Date().getFullYear()))).length;
+  $('#special').style.display='none';
+  toast(kind==='auto'?'Ripristinato':kind.toUpperCase(),getVar('--glow'));
+  render();
+}
+function dayMenu(day){
+  const s=shiftFor(day), ov=overrides[day];
+  const opts=[['ferie','Ferie','--violet'],['richiamo','Richiamo (turno extra)','--gold'],
+              ['libero','Libero / permesso','--green'],['auto','Ripristina turno normale','--dim']];
+  const box=`<div class="box"><div style="padding:10px 14px;border-bottom:1px solid color-mix(in srgb,var(--violet) 35%,transparent);display:flex;justify-content:space-between;align-items:center">
+    <span class="mono" style="font-size:11px;letter-spacing:2px;color:var(--violet)">${day.split('-').reverse().join('/')}</span>
+    <button data-action="close-special" style="background:none;border:none;color:var(--dim);font-size:16px">✕</button></div>
+    <div style="padding:18px">
+      <div class="mono" style="font-size:11px;color:var(--dim);margin-bottom:14px">
+        Turno da calendario: <span style="color:var(--glow)">${s.kind}${s.label?' · '+s.label:''}</span>${ov?' → ora: <span style="color:var(--gold)">'+ov+'</span>':''}</div>
+      <div class="stack">${opts.map(([k,t,c])=>`<button class="mono" data-action="ovr" data-day="${day}" data-kind="${k}"
+        style="width:100%;text-align:left;padding:11px 13px;font-size:12px;letter-spacing:1px;color:var(${c});
+        border:1px solid color-mix(in srgb,var(${c}) 40%,transparent);background:color-mix(in srgb,var(${c}) 6%,transparent)">${t}</button>`).join('')}
+        <button class="mono" data-action="train" data-day="${day}" style="width:100%;text-align:left;padding:11px 13px;font-size:12px;
+        letter-spacing:1px;color:var(--sys);border:1px solid color-mix(in srgb,var(--sys) 40%,transparent);
+        background:color-mix(in srgb,var(--sys) 6%,transparent);margin-top:6px">${(events[day]||[]).length?'✕ Togli allenamento':'💪 Segna allenamento'}</button></div>
+    </div></div>`;
+  const m=$('#special'); m.innerHTML=box; m.style.display='grid';
+}
+
+function viewCalendar(){
+  if(!cLoaded){ loadCal(); return `<div class="lbl dim">Pianificazione</div><div class="hi mb14">Calendario</div>
+    <div class="mono" style="font-size:12px;color:var(--dim)">caricamento…</div>`; }
+  const now=new Date();
+  if(!calMonth) calMonth={y:now.getFullYear(),m:now.getMonth()};
+  const {y,m}=calMonth;
+  const MESI=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+  const first=new Date(y,m,1), start=((first.getDay()+6)%7); // lunedì = 0
+  const ndays=new Date(y,m+1,0).getDate();
+  const todayStr=iso(now);
+
+  let cells='';
+  for(let i=0;i<start;i++) cells+='<div></div>';
+  for(let d=1;d<=ndays;d++){
+    const ds=iso(new Date(y,m,d));
+    const s=shiftFor(ds), ov=overrides[ds];
+    const kind = ov ? (ov==='libero'?'riposo':ov) : s.kind;
+    const col=SHIFT_COLOR[kind]||'transparent';
+    const filled = col!=='transparent';
+    const lab = ov==='ferie'?'FER' : ov==='richiamo'?'EXT' : ov==='libero'?'' : s.label;
+    const ic  = ov==='ferie'?'✈' : ov==='richiamo'?'☀' : ov==='libero'?'' : s.icon;
+    const isToday = ds===todayStr;
+    cells+=`<div data-action="day" data-day="${ds}" style="aspect-ratio:1;padding:4px;cursor:pointer;position:relative;
+      border:1px solid ${isToday?'var(--glow)':'var(--line)'};
+      background:${filled?`color-mix(in srgb,${col} 20%,transparent)`:'rgba(255,255,255,.02)'};
+      box-shadow:${isToday?'0 0 10px -3px var(--glow)':'none'};display:flex;flex-direction:column;justify-content:space-between">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <span style="font-family:var(--disp);font-size:13px;font-weight:600;color:${filled?col:'var(--dim)'}">${d}</span>
+        <span style="font-size:9px;color:${filled?col:'transparent'}">${ic}</span></div>
+      <span class="mono" style="font-size:8px;letter-spacing:.5px;color:${filled?col:'transparent'}">${lab}</span>
+      ${(events[ds]||[]).length?'<i style="position:absolute;bottom:3px;right:3px;width:5px;height:5px;border-radius:50%;background:var(--glow);box-shadow:0 0 6px var(--glow)"></i>':''}</div>`;
+  }
+
+  const leg=[['diurno','8–20'],['notte','20–8'],['salto','salto turno'],['ferie','ferie'],['richiamo','richiamo']]
+    .map(([k,t])=>`<span class="mono" style="font-size:9px;color:${SHIFT_COLOR[k]};display:inline-flex;align-items:center;gap:4px">
+      <i style="width:8px;height:8px;background:${SHIFT_COLOR[k]};display:inline-block"></i>${t}</span>`).join('');
+
+  return `<div class="row mb14">
+      <div><div class="lbl dim">Turnario · Sezione B${MY_SECTION}</div><div class="hi">${MESI[m]} ${y}</div></div>
+      <div style="display:flex;gap:6px">
+        <button class="mono" data-action="mprev" style="padding:6px 10px;color:var(--sys);border:1px solid var(--line);background:transparent">‹</button>
+        <button class="mono" data-action="mnext" style="padding:6px 10px;color:var(--sys);border:1px solid var(--line);background:transparent">›</button>
+      </div></div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px">
+      ${['L','M','M','G','V','S','D'].map(g=>`<div class="mono" style="text-align:center;font-size:9px;color:var(--dim)">${g}</div>`).join('')}</div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px">${cells}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px">${leg}</div>
+    <div class="panel mt8" style="--pg:var(--violet);margin-top:14px;text-align:center">
+      <div class="mono" style="font-size:11px;letter-spacing:1px;color:var(--violet)">FERIE ${new Date().getFullYear()}</div>
+      <div style="font-family:var(--num);font-size:22px;color:var(--glow);margin-top:4px">${ferieCount} / 27</div>
+      <div class="mono" style="font-size:9px;color:var(--dim);margin-top:4px">${27-ferieCount} giorni disponibili</div></div>
+    <div class="mono" style="font-size:9px;color:var(--dim);margin-top:10px;text-align:center">tocca un giorno per ferie o richiamo</div>`;
+}
+
+/* ---- LIBRERIA (collegata al database) ---- */
+async function saveBook(){
+  const ti=$('#special input[data-book="title"]'), ai=$('#special input[data-book="author"]');
+  const t=(ti?ti.value:'').trim(), a=(ai?ai.value:'').trim();
+  if(!t){ toast('Scrivi almeno il titolo',getVar('--red')); return; }
+  const {error}=await sb.from('books').insert({user_id:OWNER_ID,title:t,author:a||null,status:'reading'});
+  if(error){ toast('Errore salvataggio',getVar('--red')); return; }
+  $('#special').style.display='none';
+  await loadBooks(); toast('Libro aggiunto',getVar('--sys')); render();
+}
+async function finishBook(id){
+  const today=localDate(profile.timezone);
+  const {error}=await sb.from('books').update({status:'finished',finished_date:today}).eq('id',id);
+  if(error){ toast('Errore, riprova',getVar('--red')); return; }
+  await loadBooks(); await checkSpecialQuests(); toast('Libro completato!',getVar('--green')); render();
+}
+async function delBook(id){
+  if(!confirm('Vuoi eliminare questo libro dalla libreria?')) return;
+  const {error}=await sb.from('books').delete().eq('id',id);
+  if(error){ toast('Errore, riprova',getVar('--red')); return; }
+  await loadBooks(); toast('Libro eliminato',getVar('--dim')); render();
+}
+function bookForm(){
+  const box=`<div class="box"><div style="padding:10px 14px;border-bottom:1px solid color-mix(in srgb,var(--violet) 35%,transparent);display:flex;justify-content:space-between;align-items:center">
+    <span class="mono" style="font-size:11px;letter-spacing:2px;color:var(--violet)">＋ NUOVO LIBRO</span>
+    <button data-action="close-special" style="background:none;border:none;color:var(--dim);font-size:16px">✕</button></div>
+    <div style="padding:18px">
+      <div class="mono" style="font-size:10px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">TITOLO</div>
+      <input data-book="title" placeholder="Titolo del libro"
+        style="width:100%;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--glow);font-size:14px;padding:10px;outline:none;margin-bottom:14px">
+      <div class="mono" style="font-size:10px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">AUTORE</div>
+      <input data-book="author" placeholder="Autore (facoltativo)"
+        style="width:100%;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--glow);font-size:14px;padding:10px;outline:none;margin-bottom:20px">
+      <button class="btnfull" data-action="save-book">AGGIUNGI ALLA LIBRERIA</button>
+    </div></div>`;
+  const m=$('#special'); m.innerHTML=box; m.style.display='grid';
+  setTimeout(()=>{ const i=$('#special input[data-book="title"]'); if(i) i.focus(); },60);
+}
+
+function viewLibrary(){
+  if(!libLoaded){
+    return `<div class="row mb14"><div><div class="lbl dim">Memoria</div><div class="hi">Libreria</div></div></div>
+      <div class="mono" style="font-size:12px;color:var(--dim)">caricamento…</div>`;
+  }
+  const reading=books.filter(b=>b.status==='reading');
+  const finished=books.filter(b=>b.status==='finished')
+    .sort((a,b)=>(b.finished_date||'').localeCompare(a.finished_date||''));
+
+  const readCards = reading.length ? reading.map(b=>`
+    <div class="panel" style="--pg:var(--violet);padding:14px;margin-bottom:9px">
+      <div style="width:26px;height:3px;background:var(--violet);box-shadow:0 0 8px var(--violet);margin-bottom:10px"></div>
+      <b style="font-family:var(--disp);font-size:16px">${esc(b.title)}</b>
+      <div class="mono" style="font-size:10px;color:var(--dim);margin-top:2px">${esc(b.author||'—')}</div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button class="mono" data-action="finish-book" data-id="${b.id}"
+          style="flex:1;padding:9px;font-size:11px;letter-spacing:1px;color:var(--green);border:1px solid color-mix(in srgb,var(--green) 45%,transparent);background:color-mix(in srgb,var(--green) 7%,transparent)">✔ SEGNA FINITO</button>
+        <button class="mono" data-action="del-book" data-id="${b.id}"
+          style="padding:9px 13px;font-size:12px;color:var(--red);border:1px solid rgba(255,84,104,.35);background:transparent">🗑</button>
+      </div></div>`).join('')
+    : `<div class="panel" style="--pg:var(--dim);padding:14px"><div class="mono" style="font-size:11px;color:var(--dim);line-height:1.7">Nessun libro in lettura.<br>Tocca “＋ Aggiungi libro” per iniziare.</div></div>`;
+
+  const finCards = finished.map(b=>`
+    <div class="panel" style="--pg:var(--gold);padding:12px;min-height:118px;display:flex;flex-direction:column;justify-content:space-between">
+      <div><div style="width:26px;height:3px;background:var(--gold);box-shadow:0 0 8px var(--gold);margin-bottom:10px"></div>
+      <b style="font-family:var(--disp);font-size:14px">${esc(b.title)}</b>
+      <div class="mono" style="font-size:10px;color:var(--dim);margin-top:2px">${esc(b.author||'—')}</div></div>
+      <div class="row" style="align-items:flex-end;margin-top:8px">
+        <span class="mono" style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--dim)">${fmtBookDate(b.finished_date)}</span>
+        <button data-action="del-book" data-id="${b.id}" style="background:none;border:none;color:var(--dim);font-size:13px;padding:0;cursor:pointer">🗑</button>
+      </div></div>`).join('');
+
+  return `<div class="row mb14">
+      <div><div class="lbl dim">Memoria</div><div class="hi">Libreria</div></div>
+      <div style="text-align:right"><div style="font-family:var(--num);font-size:20px;color:var(--glow)">${finished.length}</div>
+      <div class="mono" style="font-size:8px;color:var(--dim);letter-spacing:1px">LETTI</div></div></div>
+    <button class="mono" data-action="addbook" style="width:100%;padding:12px;margin-bottom:18px;font-size:12px;letter-spacing:2px;color:var(--sys);border:1px dashed var(--sys);background:rgba(67,180,255,.05)">＋ AGGIUNGI LIBRO</button>
+    <div class="lbl" style="color:var(--violet)">In lettura</div>
+    <div class="mt8 mb18">${readCards}</div>
+    ${finished.length?`<div class="lbl" style="color:var(--gold)">Finiti</div><div class="grid2 mt8">${finCards}</div>`:''}`;
+}
+
+function viewProfile(){
+  const done=[...doneToday].filter(id=>quests.some(q=>q.id===id)).length;
+  const stats=[['Streak',profile.streak_count+'g','--gold'],['Quest oggi',done+'/'+quests.length,'--sys'],['Lv. max',profile.max_level_reached,'--violet']];
+  const ms=[1,20,40,60,80].map(m=>{
+    const u=profile.max_level_reached>=m, ph=photos[m];
+    let inner, action='';
+    if(ph){
+      inner=`<div style="position:absolute;inset:0;background-image:url('${ph.url}');background-size:cover;background-position:center"></div>
+        <span class="mono" style="position:absolute;bottom:5px;left:6px;font-size:9px;color:var(--glow);text-shadow:0 0 4px #000,0 0 4px #000">LV.${m}</span>`;
+      action=`data-action="viewphoto" data-level="${m}"`;
+    } else if(u){
+      inner=`<span style="font-size:26px;color:var(--sys)">＋</span>
+        <span class="mono" style="position:absolute;bottom:6px;font-size:9px;color:var(--sys)">AGGIUNGI</span>`;
+      action=`data-action="addphoto" data-level="${m}"`;
+    } else {
+      inner=`<span style="font-size:26px">🔒</span>
+        <span class="mono" style="position:absolute;bottom:6px;font-size:9px;color:var(--dim)">BLOCCATA</span>`;
+    }
+    return `<div style="flex:0 0 auto;width:92px">
+      <div ${action} style="height:116px;border:1px solid ${u?'var(--glow)':'var(--line)'};cursor:${u?'pointer':'default'};
+      background:${u&&!ph?'linear-gradient(160deg,rgba(67,180,255,.13),transparent)':'rgba(255,255,255,.02)'};
+      display:grid;place-items:center;color:${u?'var(--glow)':'var(--dim)'};position:relative;overflow:hidden">${inner}</div>
+      <div style="text-align:center;font-family:var(--disp);font-size:13px;font-weight:600;color:${u?'var(--text)':'var(--dim)'};margin-top:6px">Lv. ${m}</div></div>`;
+  }).join('');
+  return `<div class="lbl dim">Scheda Cacciatore</div><div class="hi mb14">Il mio percorso</div>
+    <div class="panel mb16" style="--pg:var(--violet);display:flex;gap:14px;align-items:center">
+      <div style="width:74px;height:88px;flex:0 0 auto;border:1px solid color-mix(in srgb,var(--violet) 40%,transparent);
+        background:linear-gradient(160deg,rgba(181,123,255,.13),transparent);display:grid;place-items:center;color:var(--violet);font-size:32px">◈</div>
+      <div><div class="lbl" style="color:var(--violet)">Livello attuale</div><div class="lvnum">${profile.level}</div>
+      <div class="mono" style="font-size:10px;color:var(--dim);margin-top:4px">GRADO ${profile.rank} · CACCIATORE</div></div></div>
+    <div style="display:flex;gap:8px" class="mb18">${stats.map(([l,v,c])=>`<div class="panel" style="--pg:var(${c});flex:1;padding:10px;text-align:center">
+      <div style="font-family:var(--num);font-size:18px;color:var(${c})">${v}</div>
+      <div class="mono" style="font-size:9px;color:var(--dim);letter-spacing:1px;margin-top:3px">${l.toUpperCase()}</div></div>`).join('')}</div>
+    ${specialSection()}
+    <div class="lbl">Archivio Estetico</div>
+    <div class="mono" style="font-size:10px;color:var(--dim);margin:4px 0 10px">una foto ogni 20 livelli</div>
+    <div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:6px">${ms}</div>
+    <button class="mono" data-action="gotomanage" style="width:100%;padding:12px;margin-top:4px;font-size:12px;letter-spacing:2px;color:var(--violet);border:1px solid color-mix(in srgb,var(--violet) 45%,transparent);background:color-mix(in srgb,var(--violet) 6%,transparent)">⚙ GESTISCI QUEST</button>
+    <div style="margin-top:22px;padding-top:14px;border-top:1px solid var(--line)">
+      <div class="mono" style="font-size:9px;color:var(--dim);letter-spacing:1px;margin-bottom:8px">DEMO · SIMULA FLUTTUAZIONE</div>
+      <button class="demo" data-action="skip">✕ QUEST GIORNALIERA SALTATA (−${SKIP_PENALTY} XP)</button>
+      <div class="mono" style="font-size:9px;color:var(--dim);text-align:center;margin-top:12px">versione ${APP_VERSION}</div></div>`;
+}
+
+/* ---------- sezione Quest Speciali nel Profilo ---------- */
+function specialSection(){
+  const ths=[20,40,60,80].filter(t=>profile.max_level_reached>=t && CHALLENGES[t]);
+  if(!ths.length) return '';
+  const cards=ths.map(t=>{
+    const s=special[t];
+    if(!s){
+      return `<div class="panel" style="--pg:var(--violet);padding:12px;margin-bottom:9px">
+        <div class="row"><div style="flex:1"><div class="mono" style="font-size:10px;color:var(--violet)">SOGLIA ${t} · DISPONIBILE</div>
+          <b style="font-family:var(--disp);font-size:15px">Quest speciale da affrontare</b></div>
+          <button class="mono" data-action="choose-special" data-th="${t}" style="padding:9px 13px;font-size:11px;letter-spacing:1px;color:var(--violet);border:1px solid color-mix(in srgb,var(--violet) 45%,transparent);background:color-mix(in srgb,var(--violet) 7%,transparent)">SCEGLI</button></div></div>`;
+    }
+    if(s.status==='completed'){
+      return `<div class="panel" style="--pg:var(--green);padding:12px;margin-bottom:9px;opacity:.9">
+        <div class="mono" style="font-size:10px;color:var(--green)">SOGLIA ${t} · COMPLETATA ✓</div>
+        <b style="font-family:var(--disp);font-size:15px">${esc(s.title)}</b>
+        <div class="mono" style="font-size:10px;color:var(--dim);margin-top:2px">Ricompensa incassata: +${s.xp_reward} XP</div></div>`;
+    }
+    const cur=(metricNow&&metricNow[s.metric]!==undefined)?metricNow[s.metric]:s.baseline;
+    const tot=Math.max(1,s.goal-s.baseline);
+    const prog=Math.max(0,Math.min(tot, cur-s.baseline));
+    const pct=Math.min(100,prog/tot*100);
+    return `<div class="panel" style="--pg:var(--gold);padding:12px;margin-bottom:9px">
+      <div class="mono" style="font-size:10px;color:var(--gold)">SOGLIA ${t} · IN CORSO</div>
+      <b style="font-family:var(--disp);font-size:15px">${esc(s.title)}</b>
+      <div class="mono" style="font-size:10px;color:var(--dim);margin:2px 0 8px;line-height:1.4">${esc(s.description)}</div>
+      <div class="row mono" style="font-size:10px;color:var(--dim);margin-bottom:5px"><span>${prog}/${tot} ${METRIC_LABEL[s.metric]||''}</span><span style="color:var(--gold)">+${s.xp_reward} XP</span></div>
+      <div class="bar"><i style="width:${pct}%;background:linear-gradient(90deg,var(--gold),var(--glow));box-shadow:0 0 12px var(--gold)"></i></div></div>`;
+  }).join('');
+  return `<div class="lbl" style="color:var(--violet);margin-bottom:8px">Quest Speciali</div>${cards}
+    <div style="height:14px"></div>`;
+}
+
+/* ---------- eventi ---------- */
+document.getElementById('nav').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return; tab=b.dataset.tab; render();
+});
+document.getElementById('screen').addEventListener('click',e=>{
+  const el=e.target.closest('[data-action]'); if(!el) return;
+  const a=el.dataset.action;
+  if(a==='quest') completeQuest(el.dataset.id);
+  else if(a==='music') toggleMusic();
+  else if(a==='spotify') openSpotify();
+  else if(a==='skip') skipDay();
+  else if(a==='plan'){ planIdx=+el.dataset.i; render(); }
+  else if(a==='savew') saveWeight(el.dataset.id, el);
+  else if(a==='day') dayMenu(el.dataset.day);
+  else if(a==='mprev'){ calMonth.m--; if(calMonth.m<0){calMonth.m=11;calMonth.y--;} render(); }
+  else if(a==='mnext'){ calMonth.m++; if(calMonth.m>11){calMonth.m=0;calMonth.y++;} render(); }
+  else if(a==='addbook') bookForm();
+  else if(a==='finish-book') finishBook(el.dataset.id);
+  else if(a==='del-book') delBook(el.dataset.id);
+  else if(a==='addphoto') pickPhoto(+el.dataset.level);
+  else if(a==='viewphoto') photoModal(+el.dataset.level);
+  else if(a==='gotomanage'){ tab='manage'; render(); }
+  else if(a==='backtome'){ tab='me'; render(); }
+  else if(a==='qnew') openQuestForm(null);
+  else if(a==='qedit') openQuestForm(el.dataset.id);
+  else if(a==='qtoggle') toggleQuestActive(el.dataset.id);
+  else if(a==='qup') moveQuest(el.dataset.id,-1);
+  else if(a==='qdown') moveQuest(el.dataset.id,1);
+  else if(a==='choose-special') specialChoiceModal(+el.dataset.th);
+});
+document.getElementById('photoInput').addEventListener('change',e=>{
+  const f=e.target.files&&e.target.files[0];
+  if(f) uploadPhoto(f, uploadLevel);
+  e.target.value='';
+});
+document.getElementById('special').addEventListener('click',e=>{
+  const ov=e.target.closest('[data-action="ovr"]');
+  if(ov){ setOverride(ov.dataset.day, ov.dataset.kind); return; }
+  const tr=e.target.closest('[data-action="train"]');
+  if(tr){ toggleTraining(tr.dataset.day); return; }
+  const sbk=e.target.closest('[data-action="save-book"]');
+  if(sbk){ saveBook(); return; }
+  const rp=e.target.closest('[data-action="repphoto"]');
+  if(rp){ pickPhoto(+rp.dataset.level); return; }
+  const dp=e.target.closest('[data-action="delphoto"]');
+  if(dp){ delPhoto(+dp.dataset.level); return; }
+  const sq=e.target.closest('[data-action="save-quest"]');
+  if(sq){ saveQuestForm(); return; }
+  const wk=e.target.closest('[data-action="welcome-ok"]');
+  if(wk){ $('#special').style.display='none';
+    if(musicPref&&bgmOk&&bgm&&bgm.paused) bgm.play().catch(()=>{}); return; }
+  const ac=e.target.closest('[data-action="accept-ch"]');
+  if(ac){ if(confirm('Scegliere questa sfida? La scelta è definitiva.')) acceptChallenge(+ac.dataset.th, ac.dataset.cid); return; }
+  if(e.target.closest('[data-action="close-special"]') || e.target.id==='special'){
+    $('#special').style.display='none';
+  }
+});
+
+/* ---------- avvio ---------- */
+(function start(){
+  if(!SUPABASE_URL || !SUPABASE_ANON_KEY){
+    $('#screen').innerHTML=`<div class="panel" style="--pg:var(--gold);margin-top:40px">
+      <div class="lbl" style="color:var(--gold)">Configurazione</div>
+      <p style="font-family:var(--disp);font-size:15px;line-height:1.5">Manca il file <b>config.js</b> nella stessa cartella,
+      oppure è vuoto. Deve contenere le tue 2 chiavi Supabase.</p></div>`;
+    return;
+  }
+  sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+  load().catch(err=>{ $('#screen').innerHTML=`<div class="panel" style="--pg:var(--red);margin-top:40px">
+    <div class="lbl" style="color:var(--red)">Errore</div>
+    <p style="font-family:var(--mono);font-size:12px;line-height:1.5">${esc(err.message||String(err))}</p></div>`; });
+})();
+</script>
+</body>
+</html>

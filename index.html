@@ -220,7 +220,7 @@ const SUPABASE_URL      = CFG.url || "";
 const SUPABASE_ANON_KEY = CFG.key || "";
 
 const OWNER_ID = "00000000-0000-0000-0000-000000000001"; // il tuo unico profilo
-const APP_VERSION = "2.5";
+const APP_VERSION = "2.6";
 const PHOTO_BUCKET = "progress-photos";
 
 /* ---------- logica livelli (pura) ---------- */
@@ -1644,8 +1644,40 @@ function bootHide(){
   setTimeout(bootHide,3600);
 })();
 
+/* ============================================================
+   v2.6 — AGGIORNAMENTO AUTOMATICO
+   Safari tiene in memoria la copia scaricata dell'app: senza questo
+   controllo il telefono continuerebbe a mostrare la versione vecchia
+   finché non si toglie e rimette l'icona dalla schermata Home.
+   Come funziona: nella cartella c'è il file `versione.txt` con dentro
+   solo il numero dell'ultima versione pubblicata (lo aggiorna da solo
+   `pubblica.bat`). All'avvio l'app lo rilegge saltando la cache e,
+   se non coincide con APP_VERSION, si ricarica aggiungendo `?v=numero`
+   all'indirizzo: essendo un indirizzo nuovo, Safari è costretto a
+   riscaricare il file aggiornato.
+   La protezione con sessionStorage evita che, se qualcosa non torna,
+   l'app entri in un ciclo infinito di ricariche.
+   In locale (doppio clic, file://) la lettura fallisce e viene ignorata.
+   ============================================================ */
+async function checkUpdate(){
+  try{
+    const r=await fetch('versione.txt?t='+Date.now(),{cache:'no-store'});
+    if(!r.ok) return;
+    const v=(await r.text()).trim();
+    if(!v || v.length>10 || v===APP_VERSION) return;
+    let tried=null; try{ tried=sessionStorage.getItem('rv_upd'); }catch(e){}
+    if(tried===v) return;                       // già tentato: non insistere
+    try{ sessionStorage.setItem('rv_upd',v); }catch(e){}
+    const b=document.querySelector('#boot .bt');
+    if(b && !bootDone) b.textContent='AGGIORNAMENTO IN CORSO';
+    else toast('AGGIORNAMENTO ALLA '+v,getVar('--glow'));
+    setTimeout(()=>{ location.replace(location.pathname+'?v='+encodeURIComponent(v)); },1200);
+  }catch(e){ /* offline o apertura in locale: si prosegue normalmente */ }
+}
+
 /* ---------- avvio ---------- */
 (function start(){
+  checkUpdate();                                // v2.6: controlla se online c'è una versione più nuova
   if(!SUPABASE_URL || !SUPABASE_ANON_KEY){
     $('#screen').innerHTML=`<div class="panel" style="--pg:var(--gold);margin-top:40px">
       <div class="lbl" style="color:var(--gold)">Configurazione</div>
